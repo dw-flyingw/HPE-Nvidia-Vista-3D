@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose --file docker-compose.yml convert
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: image-server
+  name: image-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: image-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose --file docker-compose.yml convert
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: image-server
+    spec:
+      containers:
+        - env:
+            - name: DICOM_FOLDER
+              value: /data/dicom
+            - name: IMAGE_SERVER
+              value: http://localhost:8888
+            - name: OUTPUT_FOLDER
+              value: /data/output
+          image: dwtwp/vista3d-image-server:latest
+          name: vista3d-image-server-for-frontend
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /data/output
+              name: image-server-claim0
+              readOnly: true
+            - mountPath: /data/dicom
+              name: image-server-claim1
+              readOnly: true
+      restartPolicy: Always
+      volumes:
+        - name: image-server-claim0
+          persistentVolumeClaim:
+            claimName: image-server-claim0
+            readOnly: true
+        - name: image-server-claim1
+          persistentVolumeClaim:
+            claimName: image-server-claim1
+            readOnly: true

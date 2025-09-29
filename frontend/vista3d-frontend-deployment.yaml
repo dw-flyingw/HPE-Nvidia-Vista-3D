@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose --file docker-compose.yml convert
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: vista3d-frontend
+  name: vista3d-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: vista3d-frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose --file docker-compose.yml convert
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: vista3d-frontend
+    spec:
+      containers:
+        - env:
+            - name: DICOM_FOLDER
+              value: /app/dicom
+            - name: DOCKER_CONTAINER
+              value: "true"
+            - name: EXTERNAL_IMAGE_SERVER
+              value: http://localhost:8888
+            - name: IMAGE_SERVER
+              value: http://localhost:8888
+            - name: OUTPUT_FOLDER
+              value: /app/output
+            - name: STREAMLIT_SERVER_FILE_WATCHER_TYPE
+              value: auto
+            - name: STREAMLIT_SERVER_RUN_ON_SAVE
+              value: "true"
+            - name: VISTA3D_IMAGE_SERVER_URL
+              value: http://localhost:8888
+            - name: VISTA3D_SERVER
+              value: http://host.docker.internal:8000
+          image: dwtwp/vista3d-frontend:latest
+          name: vista3d-frontend-standalone
+          ports:
+            - containerPort: 8501
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /app/output
+              name: vista3d-frontend-claim0
+            - mountPath: /app/dicom
+              name: vista3d-frontend-claim1
+            - mountPath: /app
+              name: vista3d-frontend-cm2
+            - mountPath: /app/.venv
+              name: vista3d-frontend-claim3
+            - mountPath: /app/__pycache__
+              name: vista3d-frontend-claim4
+            - mountPath: /app/.pytest_cache
+              name: vista3d-frontend-claim5
+      restartPolicy: Always
+      volumes:
+        - name: vista3d-frontend-claim0
+          persistentVolumeClaim:
+            claimName: vista3d-frontend-claim0
+        - name: vista3d-frontend-claim1
+          persistentVolumeClaim:
+            claimName: vista3d-frontend-claim1
+        - configMap:
+            name: vista3d-frontend-cm2
+          name: vista3d-frontend-cm2
+        - name: vista3d-frontend-claim3
+          persistentVolumeClaim:
+            claimName: vista3d-frontend-claim3
+        - name: vista3d-frontend-claim4
+          persistentVolumeClaim:
+            claimName: vista3d-frontend-claim4
+        - name: vista3d-frontend-claim5
+          persistentVolumeClaim:
+            claimName: vista3d-frontend-claim5

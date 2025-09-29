@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose --file docker-compose.yml convert
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: image-server
+  name: image-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: image-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose --file docker-compose.yml convert
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: image-server
+    spec:
+      containers:
+        - env:
+            - name: DICOM_FOLDER
+              value: /data/dicom
+            - name: IMAGE_SERVER
+              value: http://localhost:8888
+            - name: OUTPUT_FOLDER
+              value: /data/output
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          image: dwtwp/vista3d-image-server:latest
+          livenessProbe:
+            exec:
+              command:
+                - curl
+                - -f
+                - http://localhost:8888/health
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+          name: vista3d-image-server-standalone
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /data/output
+              name: image-server-claim0
+              readOnly: true
+            - mountPath: /data/dicom
+              name: image-server-claim1
+              readOnly: true
+            - mountPath: /srv
+              name: image-server-cm2
+            - mountPath: /srv/.venv
+              name: image-server-claim3
+            - mountPath: /srv/__pycache__
+              name: image-server-claim4
+            - mountPath: /srv/.pytest_cache
+              name: image-server-claim5
+      restartPolicy: Always
+      volumes:
+        - name: image-server-claim0
+          persistentVolumeClaim:
+            claimName: image-server-claim0
+            readOnly: true
+        - name: image-server-claim1
+          persistentVolumeClaim:
+            claimName: image-server-claim1
+            readOnly: true
+        - configMap:
+            name: image-server-cm2
+          name: image-server-cm2
+        - name: image-server-claim3
+          persistentVolumeClaim:
+            claimName: image-server-claim3
+        - name: image-server-claim4
+          persistentVolumeClaim:
+            claimName: image-server-claim4
+        - name: image-server-claim5
+          persistentVolumeClaim:
+            claimName: image-server-claim5

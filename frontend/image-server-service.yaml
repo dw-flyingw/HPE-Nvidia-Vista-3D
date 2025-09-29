@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose --file docker-compose.yml convert
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: image-server
+  name: image-server
+spec:
+  ports:
+    - name: "8888"
+      port: 8888
+      targetPort: 8888
+  selector:
+    io.kompose.service: image-server
