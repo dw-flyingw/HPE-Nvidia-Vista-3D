@@ -34,6 +34,8 @@ frontend:
       mountPath: /app/output
     - name: dicom-data
       mountPath: /app/dicom
+    - name: frontend-code
+      mountPath: /app
 
 imageServer:
   enabled: true
@@ -71,6 +73,10 @@ persistence:
     enabled: true
     accessMode: ReadOnlyMany
     size: 50Gi
+  frontendCode:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
 
 sampleData:
   enabled: true

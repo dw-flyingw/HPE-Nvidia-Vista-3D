@@ -25,6 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY utils/ ./utils/
+COPY assets/ ./assets/
+COPY conf/ ./conf/
 COPY app.py ./app.py
 CMD ["/usr/local/bin/streamlit", "run", "/app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
