@@ -7,7 +7,7 @@
 set -e  # Exit on error
 
 # Configuration
-DOCKER_USERNAME="dwtwp"
+DOCKER_USERNAME="mendeza"
 VERSION="${1:-v1.0.0}"  # Default to v1.0.0 if no version specified
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

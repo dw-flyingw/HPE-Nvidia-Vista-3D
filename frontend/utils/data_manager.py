@@ -39,41 +39,10 @@ class DataManager:
 
     def _find_working_image_server_url(self, initial_url: str) -> str:
         """
-        Attempts to find a working image server URL by trying multiple fallbacks.
+        Directly use the initial URL. Let configuration handle correctness.
         """
-        urls_to_try = [initial_url]
-        
-        # If running in Docker container, try multiple approaches
-        if os.getenv("DOCKER_CONTAINER") == "true":
-            # Add Docker-specific fallbacks
-            urls_to_try.extend([
-                "http://localhost:8888",  # localhost fallback
-                "http://127.0.0.1:8888",  # IP fallback
-                "http://image-server:8888",  # Container name (if image server is in same compose)
-            ])
-        
-        # Ensure unique URLs and preserve order as much as possible
-        unique_urls = []
-        for url in urls_to_try:
-            if url not in unique_urls:
-                unique_urls.append(url)
-
-        print(f"DEBUG: Attempting to connect to image server using URLs: {unique_urls}")
-
-        for url in unique_urls:
-            try:
-                # Try to access a known endpoint, like the root of the output directory
-                test_url = f"{url}/output/"
-                response = requests.head(test_url, timeout=SERVER_TIMEOUT)
-                if response.status_code == 200:
-                    print(f"DEBUG: Successfully connected to image server at: {url}")
-                    return url
-            except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
-                print(f"DEBUG: Connection attempt to {url} failed: {type(e).__name__}: {e}")
-                continue
-        
-        print(f"DEBUG: Failed to connect to image server using any of the fallback URLs. Defaulting to initial URL: {initial_url}")
-        return initial_url # Fallback to the initial URL if no working URL is found
+        print(f"DEBUG: Using configured image server URL: {initial_url}")
+        return initial_url
 
 
     def parse_directory_listing(self, html_content: str) -> List[Dict[str, str]]:

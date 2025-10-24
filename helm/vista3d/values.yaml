@@ -13,8 +13,8 @@ frontend:
   name: vista3d-frontend
   replicaCount: 1
   image:
-    repository: dwtwp/vista3d-frontend
-    tag: latest
+    repository: mendeza/vista3d-frontend
+    tag: v1.0.0
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -74,7 +74,7 @@ persistence:
 
 sampleData:
   enabled: true
-  url: "https://github.com/dw-flyingw/HPE-Nvidia-Vista-3D/releases/download/v1.0.0/sample_data.tgz"
+  url: "https://media.githubusercontent.com/media/dw-flyingw/HPE-Nvidia-Vista-3D/main/sample_data.tgz"
   extractToDicom: true
   extractToOutput: true
 

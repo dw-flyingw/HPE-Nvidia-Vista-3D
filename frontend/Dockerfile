@@ -24,8 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install only frontend deps
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY utils/ ./utils/
-COPY app.py ./app.py
+COPY . .
 CMD ["/usr/local/bin/streamlit", "run", "/app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 

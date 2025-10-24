@@ -30,11 +30,8 @@ initial_external_image_server_url = os.getenv('EXTERNAL_IMAGE_SERVER', 'http://l
 
 # Initialize a temporary DataManager to resolve the internal URL for health checks
 # In Docker containers, use the internal hostname directly for container-to-container communication
-if os.getenv("DOCKER_CONTAINER") == "true":
-    IMAGE_SERVER_URL = "http://image-server:8888"
-else:
-    temp_data_manager = DataManager(initial_image_server_url)
-    IMAGE_SERVER_URL = temp_data_manager.image_server_url
+IMAGE_SERVER_URL = initial_image_server_url
+
 
 # For external URL, use the environment variable directly (don't let DataManager override it)
 EXTERNAL_IMAGE_SERVER_URL = initial_external_image_server_url
