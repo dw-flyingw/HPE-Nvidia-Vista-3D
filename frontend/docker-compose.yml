@@ -30,6 +30,8 @@ services:
     depends_on:
       - image-server
     restart: unless-stopped
+    networks:
+      - vista3d-network
 
   image-server:
     image: dwtwp/vista3d-image-server:latest
@@ -44,5 +46,11 @@ services:
       - ${OUTPUT_FOLDER:-../output}:/data/output:ro
       - ${DICOM_FOLDER:-../dicom}:/data/dicom:ro
     restart: unless-stopped
+    networks:
+      - vista3d-network
+
+networks:
+  vista3d-network:
+    driver: bridge
 
 

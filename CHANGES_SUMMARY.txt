@@ -1,0 +1,98 @@
+================================================================================
+LINUX DEPLOYMENT FIX - CHANGES SUMMARY
+================================================================================
+
+PROBLEM:
+--------
+Frontend on Ubuntu shows: "❌ Offline • http://host.docker.internal:8000"
+But Vista3D server IS running at: http://localhost:8000/v1/health/live
+
+ROOT CAUSE:
+-----------
+host.docker.internal is a Mac/Windows Docker Desktop feature that doesn't work on Linux.
+
+SOLUTION IMPLEMENTED:
+---------------------
+1. Added Docker networking to frontend/docker-compose.yml
+   - Created explicit "vista3d-network" bridge network
+   - Both frontend and image-server containers now on this network
+   - Allows container-to-container communication using container names
+
+2. Updated backend/docker-compose.yml
+   - Added "extra_hosts: host-gateway" mapping for Linux compatibility
+   - Added explicit network configuration
+   - Maps host.docker.internal to actual gateway (works on Linux now)
+
+3. Enhanced utils/server_status.py (no changes needed, already had fallback logic)
+   - Tries multiple URLs in order:
+     1. Configured VISTA3D_SERVER (http://host.docker.internal:8000)
+     2. Container name (http://vista3d-server:8000) ✅ Works on Linux
+     3. localhost:8000
+     4. 127.0.0.1:8000
+
+FILES CREATED/MODIFIED:
+-----------------------
+✅ frontend/docker-compose.yml
+   - Added networks section with vista3d-network
+   - Image-server also added to network
+
+✅ backend/docker-compose.yml  
+   - Added host-gateway mapping in extra_hosts
+   - Added networks configuration
+
+✅ docs/LINUX_DEPLOYMENT.md
+   - Comprehensive guide for Linux deployments
+   - 3 solution scenarios documented
+   - Troubleshooting section included
+
+✅ dot_env_template
+   - Added Linux deployment configuration notes
+   - Documented which URLs will be tried
+
+✅ .env.linux-example (NEW)
+   - Quick reference .env file for Linux
+   - 3 scenarios covered with clear examples
+
+✅ LINUX_SETUP_QUICK_FIX.md (NEW)
+   - Quick action steps
+   - Choose your scenario (same server, different servers, Mac+Ubuntu)
+   - Verification commands
+
+HOW TO USE:
+-----------
+For same-server deployment (recommended):
+
+1. Create .env file in frontend directory:
+   VISTA3D_SERVER="http://vista3d-server:8000"
+   VISTA3D_IMAGE_SERVER_URL="http://image-server:8888"
+   (See .env.linux-example for complete template)
+
+2. Run from frontend directory:
+   docker-compose up -d
+
+3. Frontend will access backend via Docker network using container name
+   → No more "host.docker.internal" issues!
+
+BACKWARD COMPATIBILITY:
+-----------------------
+✅ Mac Docker Desktop still works (host.docker.internal is still available)
+✅ Fallback URLs ensure compatibility across platforms
+✅ Existing SSH tunnel setups still work
+✅ No breaking changes to existing configurations
+
+PERFORMANCE IMPACT:
+-------------------
+✅ Container-to-container communication is now faster (no SSH tunnel overhead)
+✅ Health checks will try multiple URLs but still succeed via fallback
+✅ No latency penalty - Docker internal network is highly optimized
+
+TESTING:
+--------
+To verify it works:
+
+docker exec vista3d-frontend-standalone \
+  curl -v http://vista3d-server:8000/v1/vista3d/info
+
+Expected: HTTP 200 response (not connection refused)
+
+================================================================================
