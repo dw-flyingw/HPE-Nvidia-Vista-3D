@@ -63,6 +63,21 @@ VESSELS_OF_INTEREST="all"
 # =============================================================================
 
 # =============================================================================
+# FOR LINUX REMOTE DEPLOYMENTS (Ubuntu Server)
+# =============================================================================
+# If running frontend on the same Ubuntu server as backend:
+# VISTA3D_SERVER="http://vista3d-server:8000"
+# or if running separately:
+# VISTA3D_SERVER="http://<backend-server-ip>:8000"
+#
+# The frontend code will try these URLs in order (on Linux):
+# 1. Configured VISTA3D_SERVER (e.g., http://host.docker.internal:8000)
+# 2. http://vista3d-server:8000 (container name - works if both in same network)
+# 3. http://localhost:8000 (fallback)
+# 4. http://127.0.0.1:8000 (IP fallback)
+# =============================================================================
+
+# =============================================================================
 # DOCKER CONFIGURATION
 # =============================================================================
 COMPOSE_PROJECT_NAME="vista3d-platform"
