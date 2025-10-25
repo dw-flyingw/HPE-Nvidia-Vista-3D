@@ -1,0 +1,13 @@
+# Update the backend .env file
+cd ~/HPE-Nvidia-Vista-3D/backend
+sed -i 's|IMAGE_SERVER="http://localhost:8888"|IMAGE_SERVER="http://image-server:8888"|g' .env
+
+# Verify the change
+grep IMAGE_SERVER .env
+
+# Restart the Vista3D server to pick up the new configuration
+docker compose down
+docker compose up -d
+
+# Verify the Vista3D server now has the correct IMAGE_SERVER setting
+docker exec vista3d-server-standalone env | grep IMAGE_SERVER
