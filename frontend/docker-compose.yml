@@ -12,8 +12,8 @@ services:
       - EXTERNAL_IMAGE_SERVER=${EXTERNAL_IMAGE_SERVER:-http://localhost:8888}
       - OUTPUT_FOLDER=/app/output
       - DICOM_FOLDER=/app/dicom
-      - VISTA3D_SERVER=${VISTA3D_SERVER:-http://host.docker.internal:8000}
-      - VISTA3D_IMAGE_SERVER_URL=${VISTA3D_IMAGE_SERVER_URL:-http://host.docker.internal:8888}
+      - VISTA3D_SERVER=${VISTA3D_SERVER:-http://vista3d-server:8000}
+      - VISTA3D_IMAGE_SERVER_URL=${VISTA3D_IMAGE_SERVER_URL:-http://image-server:8888}
       - DOCKER_CONTAINER=true
       # Development mode settings (default)
       - STREAMLIT_SERVER_RUN_ON_SAVE=true

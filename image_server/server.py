@@ -211,7 +211,7 @@ def generate_directory_listing(directory_path: Path, request_path: str) -> str:
             {items_html}
         </ul>
         <div class="footer">
-            <p>🩻 Medical Imaging Server | FastAPI + Uvicorn</p>
+            <p>📥 Medical Imaging Server | FastAPI + Uvicorn</p>
         </div>
     </body>
     </html>
