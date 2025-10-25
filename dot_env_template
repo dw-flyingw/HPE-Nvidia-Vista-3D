@@ -1,6 +1,10 @@
 # HPE NVIDIA Vista3D Configuration Template
 # 
-# DEFAULT BEHAVIOR: Works out of the box on both Mac Docker Desktop and Linux
+# DEFAULT SETUP: Remote Linux Server with Containerized Services
+# - Vista3D server runs in Docker container on remote Linux server
+# - Frontend runs in Docker container on same remote Linux server  
+# - SSH port forwarding brings ports to your local Mac
+# - Works out of the box with smart defaults
 # 
 # Leave this empty or comment out values to use the docker-compose defaults
 # Only uncomment and modify if you need custom configuration
@@ -40,18 +44,21 @@ COMPOSE_PROJECT_NAME="vista3d-platform"
 # =============================================================================
 # 
 # DEFAULT BEHAVIOR (no .env entry needed):
-# ✅ Works on Mac Docker Desktop
-# ✅ Works on Linux (Ubuntu) Docker
+# ✅ Remote Linux server with both services containerized
+# ✅ Containers communicate via Docker network using container names
+# ✅ SSH port forwarding brings services to your Mac
 # 
 # Defaults used:
 #   VISTA3D_SERVER=http://vista3d-server:8000
 #   VISTA3D_IMAGE_SERVER_URL=http://image-server:8888
 #   IMAGE_SERVER=http://localhost:8888
 # 
-# Connection order (automatic fallback):
-#   1. Container name: vista3d-server:8000 (works if same network)
-#   2. Localhost: localhost:8000 (works if same host)
-#   3. IP address: 127.0.0.1:8000 (fallback)
+# How it works:
+#   1. Vista3D container: vista3d-server-standalone (port 8000)
+#   2. Frontend container: vista3d-frontend-standalone (port 8501)
+#   3. Image server container: vista3d-image-server-for-frontend (port 8888)
+#   4. All containers on same Docker network: vista3d-network
+#   5. SSH tunnel: Mac localhost:8000/8501/8888 → Remote server
 #
 # ONLY SET THESE if you need custom configuration:
 # - Running frontend and backend on different servers
