@@ -1,8 +1,13 @@
-# ✅ Smart Default Configuration - Now "Just Works"
+# ✅ Smart Default Configuration - Remote Linux Server Setup
 
-## What Changed
+## Default Architecture
 
-The docker-compose files now use intelligent defaults that work **automatically** on both Mac Docker Desktop and Linux without manual `.env` configuration.
+The system is configured by default for **remote Linux server deployment** with containerized services:
+
+- **Vista3D server**: Docker container on remote Linux server
+- **Frontend**: Docker container on same remote Linux server  
+- **Image server**: Docker container on same remote Linux server
+- **Access**: SSH port forwarding from your Mac to remote server
 
 ### Before (Old Way - Broken on Linux)
 ```
@@ -35,25 +40,38 @@ Even if the container name fails, the frontend tries:
 
 **Result:** System automatically finds the backend no matter how it's deployed!
 
-## Quick Start - Nothing to Configure!
+## Quick Start - Remote Linux Server
 
-### On Ubuntu Server:
+### On Remote Linux Server:
 
 ```bash
-# 1. Start backend
+# 1. Start Vista3D backend
 cd ~/path/to/backend
 docker-compose up -d
 
-# 2. Start frontend  
+# 2. Start frontend + image server
 cd ~/path/to/frontend
 docker-compose up -d
 
-# 3. Open browser
-# http://localhost:8501
-# Sidebar should show: ✅ Online
+# 3. Verify containers are running
+docker ps | grep -E "(vista3d|frontend)"
 ```
 
-That's it! No manual URL configuration needed.
+### On Your Mac:
+
+```bash
+# 4. Establish SSH port forwarding
+ssh -L 8000:localhost:8000 \
+    -L 8501:localhost:8501 \
+    -L 8888:localhost:8888 \
+    user@remote-linux-server
+
+# 5. Open browser
+# http://localhost:8501
+# Sidebar should show: ✅ Online • http://vista3d-server:8000
+```
+
+That's it! No manual configuration needed - containers communicate via Docker network.
 
 ## Why This Works Better
 

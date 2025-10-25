@@ -91,10 +91,10 @@ services:
               count: 1
               capabilities: [gpu]
     networks:
-      - default
+      - vista3d-network
 
 networks:
-  default:
+  vista3d-network:
     driver: bridge
 
 
