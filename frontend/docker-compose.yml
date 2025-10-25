@@ -51,6 +51,6 @@ services:
 
 networks:
   vista3d-network:
-    driver: bridge
+    external: true
 
 

@@ -10,7 +10,7 @@ services:
       - NGC_API_KEY=${NGC_API_KEY}
       - NGC_ORG_ID=${NGC_ORG_ID}
       - LOCAL_NIM_CACHE=/workspace/.cache/nim
-      - IMAGE_SERVER=${IMAGE_SERVER:-http://localhost:8888}
+      - IMAGE_SERVER=${IMAGE_SERVER:-http://image-server:8888}
       - VISTA3D_SERVER=http://localhost:8000
       - IGNORE_SSL_ERRORS=True
       - IMAGE_URI_ALLOW_REDIRECTS=True
@@ -95,6 +95,6 @@ services:
 
 networks:
   vista3d-network:
-    driver: bridge
+    external: true
 
 
