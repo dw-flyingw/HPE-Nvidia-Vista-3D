@@ -1,83 +1,66 @@
 # HPE NVIDIA Vista3D Configuration Template
 # 
-# This file shows the WORKING configuration for remote backend setup
-# Copy this file to .env and adjust paths for your system
+# DEFAULT BEHAVIOR: Works out of the box on both Mac Docker Desktop and Linux
+# 
+# Leave this empty or comment out values to use the docker-compose defaults
+# Only uncomment and modify if you need custom configuration
 
 # =============================================================================
-# DATA DIRECTORIES - ADJUST THESE FOR YOUR SYSTEM
+# DATA DIRECTORIES - REQUIRED - ADJUST FOR YOUR SYSTEM
 # =============================================================================
 # Use absolute paths to avoid confusion
 DICOM_FOLDER="/path/to/your/dicom"
 OUTPUT_FOLDER="/path/to/your/output"
 
 # =============================================================================
-# FRONTEND CONFIGURATION (Mac/Local Machine)
+# BACKEND NVIDIA NGC CREDENTIALS - REQUIRED FOR VISTA3D
 # =============================================================================
-# These settings work with Docker containers and SSH tunnels
-
-# Vista3D Backend URL
-# - Frontend container uses host.docker.internal to reach Mac's localhost
-# - Mac's localhost:8000 connects via SSH forward tunnel to Ubuntu backend
-VISTA3D_SERVER="http://host.docker.internal:8000"
-
-# Image Server URL (for browser/local access)
-IMAGE_SERVER="http://localhost:8888"
-
-# Image Server URL for Vista3D Backend
-# - Backend uses host.docker.internal to reach Ubuntu host (via extra_hosts mapping)
-# - Ubuntu host's localhost:8888 is the SSH reverse tunnel back to Mac
-VISTA3D_IMAGE_SERVER_URL="http://host.docker.internal:8888"
-
-# Frontend and Image Server Ports
-FRONTEND_PORT="8501"
-IMAGE_SERVER_PORT="8888"
-
-# =============================================================================
-# BACKEND CONFIGURATION (Ubuntu Server with GPU)
-# =============================================================================
-# NVIDIA NGC Configuration (required for backend)
 NGC_API_KEY="nvapi-YOUR_API_KEY_HERE"
 NGC_ORG_ID=""
 
 # =============================================================================
-# SEGMENTATION SETTINGS
+# PORTS (Optional - only change if you have conflicts)
 # =============================================================================
-# Vessels of interest for segmentation analysis or "all"
-# Example: "brain,skull,spinal cord,left common carotid artery,right common carotid artery"
+FRONTEND_PORT="8501"
+IMAGE_SERVER_PORT="8888"
+
+# =============================================================================
+# SEGMENTATION SETTINGS (Optional)
+# =============================================================================
+# Vessels of interest: "all" or specify list
 VESSELS_OF_INTEREST="all"
-
-# Alternatively, choose a predefined label set from conf/vista3d_label_sets.json
-# Examples: HeadNeckCore, HeadNeckExtended
-#LABEL_SET="HeadNeckCore"
-
-# =============================================================================
-# SSH TUNNEL SETUP (from Mac to Ubuntu Server)
-# =============================================================================
-# Run this command on your Mac to establish the tunnels:
-# ssh -L 8000:localhost:8000 -R 8888:0.0.0.0:8888 user@ubuntu-server
-#
-# What it does:
-# -L 8000:localhost:8000  - Forward tunnel: Mac can access Ubuntu's Vista3D backend
-# -R 8888:0.0.0.0:8888    - Reverse tunnel: Ubuntu can access Mac's image server
-#                           (MUST use 0.0.0.0 so Docker containers can access it)
-# =============================================================================
-
-# =============================================================================
-# FOR LINUX REMOTE DEPLOYMENTS (Ubuntu Server)
-# =============================================================================
-# If running frontend on the same Ubuntu server as backend:
-# VISTA3D_SERVER="http://vista3d-server:8000"
-# or if running separately:
-# VISTA3D_SERVER="http://<backend-server-ip>:8000"
-#
-# The frontend code will try these URLs in order (on Linux):
-# 1. Configured VISTA3D_SERVER (e.g., http://host.docker.internal:8000)
-# 2. http://vista3d-server:8000 (container name - works if both in same network)
-# 3. http://localhost:8000 (fallback)
-# 4. http://127.0.0.1:8000 (IP fallback)
-# =============================================================================
 
 # =============================================================================
 # DOCKER CONFIGURATION
 # =============================================================================
 COMPOSE_PROJECT_NAME="vista3d-platform"
+
+# =============================================================================
+# VISTA3D SERVER CONFIGURATION (Optional - Uses Smart Defaults)
+# =============================================================================
+# 
+# DEFAULT BEHAVIOR (no .env entry needed):
+# ✅ Works on Mac Docker Desktop
+# ✅ Works on Linux (Ubuntu) Docker
+# 
+# Defaults used:
+#   VISTA3D_SERVER=http://vista3d-server:8000
+#   VISTA3D_IMAGE_SERVER_URL=http://image-server:8888
+#   IMAGE_SERVER=http://localhost:8888
+# 
+# Connection order (automatic fallback):
+#   1. Container name: vista3d-server:8000 (works if same network)
+#   2. Localhost: localhost:8000 (works if same host)
+#   3. IP address: 127.0.0.1:8000 (fallback)
+#
+# ONLY SET THESE if you need custom configuration:
+# - Running frontend and backend on different servers
+# - Using SSH tunnels
+# - Behind a proxy or load balancer
+#
+# Examples:
+# VISTA3D_SERVER="http://192.168.1.100:8000"  # Different server IP
+# VISTA3D_SERVER="http://host.docker.internal:8000"  # Mac SSH tunnel
+# IMAGE_SERVER="http://192.168.1.50:8888"     # Different image server
+#
+# =============================================================================
