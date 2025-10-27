@@ -260,7 +260,21 @@ def install_sample_data(dicom_folder: str, output_folder: str, skip_prompt: bool
                         dest.parent.mkdir(exist_ok=True)
                         shutil.move(str(item), str(dest))
             print_success(f"✓ Installed output files to output/")
-        
+            
+            # Fix the extra 'original' folder in voxels directories
+            print_info("Fixing voxel file structure...")
+            output_path = Path(output_folder)
+            for patient_dir in output_path.glob("*/voxels/*"):
+                original_folder = patient_dir / "original"
+                if original_folder.exists() and original_folder.is_dir():
+                    # Move all files from original/ to parent folder
+                    for file in original_folder.iterdir():
+                        dest_file = patient_dir / file.name
+                        shutil.move(str(file), str(dest_file))
+                    # Remove the now-empty original folder
+                    original_folder.rmdir()
+                    print_success(f"✓ Fixed voxel structure in {patient_dir.name}")
+            
         print_success("Sample data installed successfully!")
         
     except Exception as e:
