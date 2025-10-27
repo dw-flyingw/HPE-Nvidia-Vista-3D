@@ -19,7 +19,10 @@ docker compose up -d
 - ⚡ **GPU-accelerated processing** for medical image segmentation
 - 🔄 **Auto-restart capability** for production deployments
 
-**Note**: The Vista3D server takes a few minutes to initialize and be ready for use.
+**Important Notes**:
+- The Vista3D server takes a few minutes to initialize and be ready for use
+- The backend does NOT start an image server - the image server is started by the frontend setup
+- The backend is configured to access the image server via network (localhost:8888 or via SSH tunnel)
 
 ## 📋 Prerequisites
 

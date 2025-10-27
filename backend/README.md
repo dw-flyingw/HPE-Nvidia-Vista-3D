@@ -51,6 +51,8 @@ After setup is complete, start the backend server:
 docker compose up
 ```
 
+**Note**: The backend does NOT start an image server. The image server is started by the frontend setup. The backend is configured to access the image server via the SSH tunnel.
+
 ### 3. Create SSH Tunnel (from your Mac)
 
 If you're accessing the server from a Mac, create an SSH tunnel:
