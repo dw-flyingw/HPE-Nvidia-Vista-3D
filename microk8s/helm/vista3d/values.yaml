@@ -139,13 +139,7 @@ frontend:
     # Development mode settings
     STREAMLIT_SERVER_RUN_ON_SAVE: "true"
     STREAMLIT_SERVER_FILE_WATCHER_TYPE: "auto"
-  volumeMounts:
-    - name: output-data
-      mountPath: /app/output
-    - name: dicom-data
-      mountPath: /app/dicom
-    - name: frontend-code
-      mountPath: /app
+  volumeMounts: []  # Volume mounts are handled in the template
   resources:
     limits:
       memory: "4Gi"
@@ -202,7 +196,7 @@ persistence:
     size: 50Gi
     storageClass: ""  # Use default storage class
   frontendCode:
-    enabled: true
+    enabled: false  # Only enable if you need to mount custom code for development
     accessMode: ReadWriteOnce
     size: 1Gi
     storageClass: ""  # Use default storage class

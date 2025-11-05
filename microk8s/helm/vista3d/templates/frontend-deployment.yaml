@@ -47,7 +47,14 @@ spec:
             {{- end }}
             {{- end }}
           volumeMounts:
-            {{- toYaml .Values.frontend.volumeMounts | nindent 12 }}
+            - name: output-data
+              mountPath: /app/output
+            - name: dicom-data
+              mountPath: /app/dicom
+            {{- if .Values.persistence.frontendCode.enabled }}
+            - name: frontend-code
+              mountPath: /app
+            {{- end }}
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
       volumes:
