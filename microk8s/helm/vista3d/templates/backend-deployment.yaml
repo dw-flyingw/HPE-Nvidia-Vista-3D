@@ -1,0 +1,63 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vista3d.backend.deploymentName" . }}
+  labels:
+    {{- include "vista3d.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "vista3d.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "vista3d.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      {{- with .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "vista3d.serviceAccountName" $ }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.backend.name }}
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.port }}
+              protocol: TCP
+          env:
+            {{- if and .Values.secrets.create .Values.secrets.ngcApiKey }}
+            - name: NGC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vista3d-secrets
+                  key: ngc-api-key
+            {{- end }}
+            {{- range $key, $value := .Values.backend.env }}
+            {{- if ne $key "NGC_API_KEY" }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.backend.volumeMounts | nindent 12 }}
+      {{- if .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.backend.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml .Values.backend.tolerations | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: output-data
+          persistentVolumeClaim:
+            claimName: {{ include "vista3d.fullname" . }}-output-pvc
+{{- end }}
+

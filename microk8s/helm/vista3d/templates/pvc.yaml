@@ -1,4 +1,5 @@
 {{- if .Values.persistence.enabled }}
+{{- if .Values.persistence.output.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -16,29 +17,28 @@ spec:
   {{- else if .Values.persistence.storageClass }}
   storageClassName: {{ .Values.persistence.storageClass }}
   {{- end }}
-  ---
-  {{- if .Values.persistence.frontendCode.enabled }}
-  apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    name: {{ include "vista3d.fullname" . }}-frontend-code-pvc
-    labels:
-      {{- include "vista3d.labels" . | nindent 4 }}
-  spec:
-    accessModes:
-      - {{ .Values.persistence.frontendCode.accessMode }}
-    resources:
-      requests:
-        storage: {{ .Values.persistence.frontendCode.size }}
-    {{- if .Values.persistence.frontendCode.storageClass }}
-    storageClassName: {{ .Values.persistence.frontendCode.storageClass }}
-    {{- else if .Values.persistence.storageClass }}
-    storageClassName: {{ .Values.persistence.storageClass }}
-    {{- end }}
-  {{- end }}
-  
-{{- end }}
 ---
+{{- end }}
+{{- if .Values.persistence.frontendCode.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vista3d.fullname" . }}-frontend-code-pvc
+  labels:
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.frontendCode.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.frontendCode.size }}
+  {{- if .Values.persistence.frontendCode.storageClass }}
+  storageClassName: {{ .Values.persistence.frontendCode.storageClass }}
+  {{- else if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+---
+{{- end }}
 {{- if .Values.persistence.dicom.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -48,7 +48,7 @@ metadata:
     {{- include "vista3d.labels" . | nindent 4 }}
 spec:
   accessModes:
-    - {{ .Values.persistence.dicom.accessMode | default .Values.persistence.accessMode }}
+    - {{ .Values.persistence.dicom.accessMode }}
   resources:
     requests:
       storage: {{ .Values.persistence.dicom.size }}
@@ -58,3 +58,5 @@ spec:
   storageClassName: {{ .Values.persistence.storageClass }}
   {{- end }}
 {{- end }}
+{{- end }}
+

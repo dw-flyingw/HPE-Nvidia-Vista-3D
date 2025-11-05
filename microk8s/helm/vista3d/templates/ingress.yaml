@@ -47,13 +47,14 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ .service }}
+                name: {{ include "vista3d.frontend.serviceName" $ }}
                 port:
                   number: {{ $svcPort }}
               {{- else }}
-              serviceName: {{ .service }}
+              serviceName: {{ include "vista3d.frontend.serviceName" $ }}
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}
     {{- end }}
 {{- end }}
+

@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "vista3d.fullname" . }}-frontend
+  name: {{ include "vista3d.frontend.deploymentName" . }}
   labels:
     {{- include "vista3d.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
@@ -18,6 +18,9 @@ spec:
         {{- include "vista3d.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: frontend
     spec:
+      {{- with .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "vista3d.serviceAccountName" $ }}
+      {{- end }}
       containers:
         - name: {{ .Values.frontend.name }}
           image: "{{ .Values.global.imageRegistry }}{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
@@ -27,24 +30,26 @@ spec:
               containerPort: {{ .Values.frontend.service.port }}
               protocol: TCP
           env:
+            {{- if .Values.backend.enabled }}
+            - name: VISTA3D_SERVER
+              value: "http://{{ include "vista3d.backend.serviceName" . }}:{{ .Values.backend.service.port }}"
+            {{- end }}
             - name: IMAGE_SERVER
-              value: "http://{{ include "vista3d.fullname" . }}-image-server:{{ .Values.imageServer.service.port }}"
+              value: "http://{{ include "vista3d.imageServer.serviceName" . }}:{{ .Values.imageServer.service.port }}"
             - name: EXTERNAL_IMAGE_SERVER
-              value: "http://{{ include "vista3d.fullname" . }}-image-server:{{ .Values.imageServer.service.port }}"
+              value: "http://{{ include "vista3d.imageServer.serviceName" . }}:{{ .Values.imageServer.service.port }}"
             - name: VISTA3D_IMAGE_SERVER_URL
-              value: "http://{{ include "vista3d.fullname" . }}-image-server:{{ .Values.imageServer.service.port }}"
-            - name: OUTPUT_FOLDER
-              value: {{ .Values.frontend.env.OUTPUT_FOLDER | quote }}
-            - name: DICOM_FOLDER
-              value: {{ .Values.frontend.env.DICOM_FOLDER | quote }}
-            - name: DOCKER_CONTAINER
-              value: {{ .Values.frontend.env.DOCKER_CONTAINER | quote }}
-            - name: STREAMLIT_SERVER_RUN_ON_SAVE
-              value: {{ .Values.frontend.env.STREAMLIT_SERVER_RUN_ON_SAVE | quote }}
-            - name: STREAMLIT_SERVER_FILE_WATCHER_TYPE
-              value: {{ .Values.frontend.env.STREAMLIT_SERVER_FILE_WATCHER_TYPE | quote }}
+              value: "http://{{ include "vista3d.imageServer.serviceName" . }}:{{ .Values.imageServer.service.port }}"
+            {{- range $key, $value := .Values.frontend.env }}
+            {{- if not (or (eq $key "VISTA3D_SERVER") (eq $key "IMAGE_SERVER") (eq $key "EXTERNAL_IMAGE_SERVER") (eq $key "VISTA3D_IMAGE_SERVER_URL")) }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
           volumeMounts:
             {{- toYaml .Values.frontend.volumeMounts | nindent 12 }}
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
       volumes:
         - name: output-data
           persistentVolumeClaim:
@@ -52,4 +57,10 @@ spec:
         - name: dicom-data
           persistentVolumeClaim:
             claimName: {{ include "vista3d.fullname" . }}-dicom-pvc
+        {{- if .Values.persistence.frontendCode.enabled }}
+        - name: frontend-code
+          persistentVolumeClaim:
+            claimName: {{ include "vista3d.fullname" . }}-frontend-code-pvc
+        {{- end }}
 {{- end }}
+

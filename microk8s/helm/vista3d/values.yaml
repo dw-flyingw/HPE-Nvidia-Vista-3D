@@ -1,0 +1,240 @@
+# Default values for vista3d
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# Backend configuration (NVIDIA NIM Vista3D)
+backend:
+  enabled: true
+  name: vista3d-backend
+  replicaCount: 1
+  image:
+    repository: nvcr.io/nim/nvidia/vista3d
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  resources:
+    limits:
+      nvidia.com/gpu: 1
+      memory: "16Gi"
+      cpu: "4"
+    requests:
+      nvidia.com/gpu: 1
+      memory: "8Gi"
+      cpu: "2"
+  nodeSelector:
+    nvidia.com/gpu: "true"
+  tolerations: []
+  env:
+    # NGC credentials (from secret)
+    NGC_API_KEY: ""  # Set via secret
+    NGC_ORG_ID: ""
+    LOCAL_NIM_CACHE: "/workspace/.cache/nim"
+    # Image server configuration
+    IMAGE_SERVER: "http://vista3d-image-server:8888"
+    VISTA3D_SERVER: "http://localhost:8000"
+    # Workspace paths
+    WORKSPACE_IMAGES_PATH: "/workspace/output/nifti"
+    WORKSPACE_OUTPUTS_PATH: "/workspace/output"
+    WORKSPACE_ROOT: "/workspace"
+    # GPU configuration
+    CUDA_VISIBLE_DEVICES: "0"
+    NVIDIA_VISIBLE_DEVICES: "0"
+    NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
+    CUDA_LAUNCH_BLOCKING: "1"
+    TORCH_USE_CUDA_DSA: "1"
+    # Security and access settings
+    IGNORE_SSL_ERRORS: "True"
+    IMAGE_URI_ALLOW_REDIRECTS: "True"
+    IMAGE_URI_HTTPS_ONLY: "False"
+    ALLOW_LOCAL_FILES: "True"
+    ENABLE_CONTAINER_PATHS: "True"
+    ENABLE_FILE_ACCESS: "True"
+    ALLOW_ABSOLUTE_PATHS: "True"
+    ALLOW_RELATIVE_PATHS: "True"
+    ALLOW_FILE_PROTOCOL: "True"
+    ALLOW_LOCAL_PATHS: "True"
+    DISABLE_URL_VALIDATION: "True"
+    ALLOW_ABSOLUTE_FILE_PATHS: "True"
+    ALLOW_RELATIVE_FILE_PATHS: "True"
+    FILE_ACCESS_MODE: "local"
+    LOCAL_FILE_ACCESS: "True"
+    ALLOW_ANY_IMAGE_SERVER_HOST: "True"
+    ALLOW_EXTERNAL_NETWORK_ACCESS: "True"
+    DISABLE_HOST_VALIDATION: "True"
+    ALLOW_ANY_IP_ACCESS: "True"
+    DISABLE_DOMAIN_WHITELIST: "True"
+    ALLOW_HTTP_ACCESS: "True"
+    ALLOW_HTTPS_ACCESS: "True"
+    ALLOW_REMOTE_ACCESS: "True"
+    ALLOW_CROSS_ORIGIN: "True"
+    DISABLE_CORS: "True"
+    ALLOW_ANY_ORIGIN: "True"
+    ALLOW_ANY_HOST: "True"
+    DISABLE_ORIGIN_VALIDATION: "True"
+    ALLOW_WILDCARD_HOSTS: "True"
+    DISABLE_IP_VALIDATION: "True"
+    ALLOW_PRIVATE_IPS: "True"
+    ALLOW_PUBLIC_IPS: "True"
+    ALLOW_LOCALHOST: "True"
+    ALLOW_LOOPBACK: "True"
+    DISABLE_NETWORK_RESTRICTIONS: "True"
+    ENABLE_EXTERNAL_ACCESS: "True"
+    ALLOW_IMAGE_SERVER_ACCESS: "True"
+    DISABLE_IMAGE_SERVER_VALIDATION: "True"
+    CORS_ALLOW_ORIGINS: "*"
+    CORS_ALLOW_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+    CORS_ALLOW_HEADERS: "*"
+    CORS_ALLOW_CREDENTIALS: "True"
+    CORS_EXPOSE_HEADERS: "*"
+    CORS_MAX_AGE: "3600"
+    VISTA3D_ALLOW_EXTERNAL_IMAGES: "True"
+    VISTA3D_DISABLE_IMAGE_VALIDATION: "True"
+    VISTA3D_ALLOW_ANY_URL: "True"
+    VISTA3D_DISABLE_URL_VALIDATION: "True"
+    VISTA3D_ALLOW_REMOTE_FILES: "True"
+    VISTA3D_DISABLE_FILE_VALIDATION: "True"
+    VISTA3D_ENABLE_NETWORK_ACCESS: "True"
+    VISTA3D_ALLOW_HTTP_DOWNLOADS: "True"
+    VISTA3D_ALLOW_HTTPS_DOWNLOADS: "True"
+    VISTA3D_DISABLE_SSL_VERIFICATION: "True"
+    VISTA3D_ALLOW_INSECURE_CONNECTIONS: "True"
+    VISTA3D_TIMEOUT: "300"
+    VISTA3D_MAX_RETRIES: "3"
+    DOMAIN_WHITELIST: '[".*","http://.*","https://.*","http://.*:.*","https://.*:.*","file:///.*","*"]'
+    SUPPORTED_IMAGE_EXT: '[".nrrd",".nii",".nii.gz",".dcm"]'
+  volumeMounts:
+    - name: output-data
+      mountPath: /workspace/output
+
+# Frontend configuration (Streamlit)
+frontend:
+  enabled: true
+  name: vista3d-frontend
+  replicaCount: 1
+  image:
+    repository: dwtwp/vista3d-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8501
+    targetPort: 8501
+  env:
+    # Server URLs (MicroK8s internal service names)
+    VISTA3D_SERVER: "http://vista3d-backend:8000"
+    IMAGE_SERVER: "http://vista3d-image-server:8888"
+    EXTERNAL_IMAGE_SERVER: "http://vista3d-image-server:8888"
+    VISTA3D_IMAGE_SERVER_URL: "http://vista3d-image-server:8888"
+    # Data paths
+    OUTPUT_FOLDER: "/app/output"
+    DICOM_FOLDER: "/app/dicom"
+    # Container identification
+    DOCKER_CONTAINER: "true"
+    # Development mode settings
+    STREAMLIT_SERVER_RUN_ON_SAVE: "true"
+    STREAMLIT_SERVER_FILE_WATCHER_TYPE: "auto"
+  volumeMounts:
+    - name: output-data
+      mountPath: /app/output
+    - name: dicom-data
+      mountPath: /app/dicom
+    - name: frontend-code
+      mountPath: /app
+  resources:
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+    requests:
+      memory: "2Gi"
+      cpu: "1"
+
+# Image server configuration (FastAPI)
+imageServer:
+  enabled: true
+  name: vista3d-image-server
+  replicaCount: 1
+  image:
+    repository: dwtwp/vista3d-image-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8888
+    targetPort: 8888
+  env:
+    OUTPUT_FOLDER: "/data/output"
+    DICOM_FOLDER: "/data/dicom"
+    IMAGE_SERVER: "http://localhost:8888"
+    PYTHONUNBUFFERED: "1"
+    PYTHONDONTWRITEBYTECODE: "1"
+  volumeMounts:
+    - name: output-data
+      mountPath: /data/output
+      readOnly: true
+    - name: dicom-data
+      mountPath: /data/dicom
+      readOnly: true
+  resources:
+    limits:
+      memory: "2Gi"
+      cpu: "1"
+    requests:
+      memory: "1Gi"
+      cpu: "0.5"
+
+# Persistence configuration
+persistence:
+  enabled: true
+  output:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 100Gi
+    storageClass: ""  # Use default storage class
+  dicom:
+    enabled: true
+    accessMode: ReadOnlyMany
+    size: 50Gi
+    storageClass: ""  # Use default storage class
+  frontendCode:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: ""  # Use default storage class
+
+# Sample data installation
+sampleData:
+  enabled: false
+  url: "https://github.com/dw-flyingw/HPE-Nvidia-Vista-3D/releases/download/v1.0.0/sample_data.tgz"
+  extractToDicom: true
+  extractToOutput: true
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Secrets configuration
+secrets:
+  create: true
+  ngcApiKey: ""  # Set via --set secrets.ngcApiKey=xxx or environment variable
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: vista3d.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+

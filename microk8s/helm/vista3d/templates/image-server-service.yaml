@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "vista3d.fullname" . }}-image-server
+  name: {{ include "vista3d.imageServer.serviceName" . }}
   labels:
     {{- include "vista3d.labels" . | nindent 4 }}
     app.kubernetes.io/component: image-server
@@ -17,3 +17,4 @@ spec:
     {{- include "vista3d.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: image-server
 {{- end }}
+

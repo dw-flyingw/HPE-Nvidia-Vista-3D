@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "vista3d.fullname" . }}-image-server
+  name: {{ include "vista3d.imageServer.deploymentName" . }}
   labels:
     {{- include "vista3d.labels" . | nindent 4 }}
     app.kubernetes.io/component: image-server
@@ -18,6 +18,9 @@ spec:
         {{- include "vista3d.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: image-server
     spec:
+      {{- with .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "vista3d.serviceAccountName" $ }}
+      {{- end }}
       containers:
         - name: {{ .Values.imageServer.name }}
           image: "{{ .Values.global.imageRegistry }}{{ .Values.imageServer.image.repository }}:{{ .Values.imageServer.image.tag }}"
@@ -27,18 +30,14 @@ spec:
               containerPort: {{ .Values.imageServer.service.port }}
               protocol: TCP
           env:
-            - name: OUTPUT_FOLDER
-              value: {{ .Values.imageServer.env.OUTPUT_FOLDER | quote }}
-            - name: DICOM_FOLDER
-              value: {{ .Values.imageServer.env.DICOM_FOLDER | quote }}
-            - name: IMAGE_SERVER
-              value: {{ .Values.imageServer.env.IMAGE_SERVER | quote }}
-            - name: PYTHONUNBUFFERED
-              value: {{ .Values.imageServer.env.PYTHONUNBUFFERED | quote }}
-            - name: PYTHONDONTWRITEBYTECODE
-              value: {{ .Values.imageServer.env.PYTHONDONTWRITEBYTECODE | quote }}
+            {{- range $key, $value := .Values.imageServer.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
           volumeMounts:
             {{- toYaml .Values.imageServer.volumeMounts | nindent 12 }}
+          resources:
+            {{- toYaml .Values.imageServer.resources | nindent 12 }}
       volumes:
         - name: output-data
           persistentVolumeClaim:
@@ -47,3 +46,4 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "vista3d.fullname" . }}-dicom-pvc
 {{- end }}
+

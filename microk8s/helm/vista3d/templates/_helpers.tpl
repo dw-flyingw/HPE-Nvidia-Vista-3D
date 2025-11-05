@@ -76,6 +76,13 @@ Create the name of the image server service
 {{- end }}
 
 {{/*
+Create the name of the backend service
+*/}}
+{{- define "vista3d.backend.serviceName" -}}
+{{- printf "%s-backend" (include "vista3d.fullname" .) }}
+{{- end }}
+
+{{/*
 Create the name of the frontend deployment
 */}}
 {{- define "vista3d.frontend.deploymentName" -}}
@@ -88,3 +95,11 @@ Create the name of the image server deployment
 {{- define "vista3d.imageServer.deploymentName" -}}
 {{- printf "%s-image-server" (include "vista3d.fullname" .) }}
 {{- end }}
+
+{{/*
+Create the name of the backend deployment
+*/}}
+{{- define "vista3d.backend.deploymentName" -}}
+{{- printf "%s-backend" (include "vista3d.fullname" .) }}
+{{- end }}
+
