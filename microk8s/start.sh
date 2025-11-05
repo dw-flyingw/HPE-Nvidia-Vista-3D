@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Ensure we're running with bash, not sh
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -14,6 +19,11 @@ HELM_CHART_DIR="$(cd "$(dirname "$0")" && pwd)/helm/vista3d"
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Ensure /snap/bin is in PATH (needed for snap-installed tools like microk8s)
+if [[ ":$PATH:" != *":/snap/bin:"* ]]; then
+    export PATH="$PATH:/snap/bin"
+fi
 
 echo -e "${GREEN}=== Vista3D MicroK8s Deployment Script ===${NC}\n"
 

@@ -1,11 +1,21 @@
 #!/bin/bash
 set -e
 
+# Ensure we're running with bash, not sh
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+# Ensure /snap/bin is in PATH (needed for snap-installed tools like microk8s)
+if [[ ":$PATH:" != *":/snap/bin:"* ]]; then
+    export PATH="$PATH:/snap/bin"
+fi
 
 # Configuration
 NAMESPACE="${NAMESPACE:-vista3d}"
