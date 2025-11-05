@@ -12,6 +12,22 @@ This directory contains scripts and Helm charts for deploying Vista3D on Ubuntu 
 
 ## Quick Start
 
+### 0. Build MicroK8s Images (First Time Setup)
+
+Before deploying, build the MicroK8s-specific Docker images:
+
+```bash
+cd microk8s
+
+# Build images locally (won't push to registry)
+./build-images.sh
+
+# Or build and push to Docker Hub
+./build-images.sh v1.0.0 dwtwp yes
+```
+
+This ensures the images have all required files (including `__init__.py` in assets folder).
+
 ### 1. Install MicroK8s (if not already installed)
 
 ```bash
@@ -20,13 +36,25 @@ sudo usermod -a -G microk8s $USER
 newgrp microk8s  # or log out and back in
 ```
 
-### 2. Set NGC API Key (Required for backend)
+### 2. (Optional) Load Images into MicroK8s
+
+If you built images locally and haven't pushed them to a registry, load them into MicroK8s:
+
+```bash
+# Import images into MicroK8s
+microk8s ctr image import <(docker save dwtwp/vista3d-frontend:microk8s-latest)
+microk8s ctr image import <(docker save dwtwp/vista3d-image-server:microk8s-latest)
+```
+
+Or if you have access to a registry, push the images and MicroK8s will pull them automatically.
+
+### 3. Set NGC API Key (Required for backend)
 
 ```bash
 export NGC_API_KEY="nvapi-your-api-key-here"
 ```
 
-### 3. Start Deployment
+### 4. Start Deployment
 
 ```bash
 cd microk8s

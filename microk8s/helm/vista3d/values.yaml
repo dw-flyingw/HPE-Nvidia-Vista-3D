@@ -119,7 +119,7 @@ frontend:
   replicaCount: 1
   image:
     repository: dwtwp/vista3d-frontend
-    tag: latest
+    tag: microk8s-latest  # Use microk8s-specific image tag
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -155,7 +155,7 @@ imageServer:
   replicaCount: 1
   image:
     repository: dwtwp/vista3d-image-server
-    tag: latest
+    tag: microk8s-latest  # Use microk8s-specific image tag
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
