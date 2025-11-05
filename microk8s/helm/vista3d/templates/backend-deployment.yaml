@@ -47,7 +47,7 @@ spec:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           volumeMounts:
             {{- toYaml .Values.backend.volumeMounts | nindent 12 }}
-      {{- if .Values.backend.nodeSelector }}
+      {{- if and .Values.backend.nodeSelector (not (empty .Values.backend.nodeSelector)) }}
       nodeSelector:
         {{- toYaml .Values.backend.nodeSelector | nindent 8 }}
       {{- end }}

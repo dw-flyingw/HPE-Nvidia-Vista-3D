@@ -137,6 +137,29 @@ microk8s kubectl describe pod <pod-name> -n vista3d
 microk8s kubectl logs <pod-name> -n vista3d
 ```
 
+### Debug Pod Issues
+
+**If backend pod is Pending:**
+```bash
+# Check why it's pending
+microk8s kubectl describe pod vista3d-backend-<pod-id> -n vista3d
+
+# Check events
+microk8s kubectl get events -n vista3d --sort-by='.lastTimestamp'
+
+# Check if PVCs are bound
+microk8s kubectl get pvc -n vista3d
+```
+
+**If frontend pod has errors:**
+```bash
+# Check pod logs
+microk8s kubectl logs vista3d-frontend-<pod-id> -n vista3d
+
+# Check pod events
+microk8s kubectl describe pod vista3d-frontend-<pod-id> -n vista3d
+```
+
 ### Check GPU Availability
 
 ```bash

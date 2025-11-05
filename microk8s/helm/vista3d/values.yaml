@@ -28,8 +28,7 @@ backend:
       nvidia.com/gpu: 1
       memory: "8Gi"
       cpu: "2"
-  nodeSelector:
-    nvidia.com/gpu: "true"
+  nodeSelector: {}
   tolerations: []
   env:
     # NGC credentials (from secret)
