@@ -3,6 +3,11 @@
 
 set -e
 
+# Ensure we're running with bash
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -16,15 +21,21 @@ IMAGE_SERVER_IMAGE="$REGISTRY/vista3d-image-server:microk8s-$VERSION"
 
 echo -e "${GREEN}=== Loading Images into MicroK8s ===${NC}\n"
 
-# Check if images exist
-if ! docker image inspect "$FRONTEND_IMAGE" &> /dev/null; then
+# Check if images exist (use docker images to check, more reliable)
+if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${FRONTEND_IMAGE}$"; then
     echo -e "${YELLOW}Error: Frontend image not found: $FRONTEND_IMAGE${NC}"
+    echo "Available images:"
+    docker images | grep vista3d || echo "  (none found)"
+    echo ""
     echo "Please build the images first with: ./build-images.sh"
     exit 1
 fi
 
-if ! docker image inspect "$IMAGE_SERVER_IMAGE" &> /dev/null; then
+if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${IMAGE_SERVER_IMAGE}$"; then
     echo -e "${YELLOW}Error: Image server image not found: $IMAGE_SERVER_IMAGE${NC}"
+    echo "Available images:"
+    docker images | grep vista3d || echo "  (none found)"
+    echo ""
     echo "Please build the images first with: ./build-images.sh"
     exit 1
 fi
