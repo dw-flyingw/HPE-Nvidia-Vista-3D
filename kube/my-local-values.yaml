@@ -1,4 +1,0 @@
-frontend:
-  externalImageServerUrl: "http://localhost:8888"
-  image:
-    tag: "v1.0.0-final-fix"

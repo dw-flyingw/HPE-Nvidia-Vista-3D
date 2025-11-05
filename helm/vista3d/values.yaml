@@ -13,9 +13,9 @@ frontend:
   name: vista3d-frontend
   replicaCount: 1
   image:
-    repository: dwtwp/vista3d-frontend
+    repository: vista3d-frontend
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8501
@@ -42,9 +42,9 @@ imageServer:
   name: vista3d-image-server
   replicaCount: 1
   image:
-    repository: dwtwp/vista3d-image-server
+    repository: vista3d-image-server
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8888
