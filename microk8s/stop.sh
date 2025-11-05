@@ -30,7 +30,16 @@ if ! command -v microk8s &> /dev/null; then
 fi
 
 # Configure kubectl for MicroK8s
-export KUBECONFIG=$(microk8s config)
+# Save microk8s config to a temporary file
+KUBECONFIG_FILE=$(mktemp)
+microk8s config > "$KUBECONFIG_FILE"
+export KUBECONFIG="$KUBECONFIG_FILE"
+
+# Cleanup function to remove temp file
+cleanup() {
+    rm -f "$KUBECONFIG_FILE"
+}
+trap cleanup EXIT
 
 # Check if Helm release exists
 if helm list -n "$NAMESPACE" 2>/dev/null | grep -q "$RELEASE_NAME"; then

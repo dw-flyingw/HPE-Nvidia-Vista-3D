@@ -125,7 +125,16 @@ if ! command -v helm &> /dev/null; then
 fi
 
 # Configure kubectl for MicroK8s
-export KUBECONFIG=$(microk8s config)
+# Save microk8s config to a temporary file
+KUBECONFIG_FILE=$(mktemp)
+microk8s config > "$KUBECONFIG_FILE"
+export KUBECONFIG="$KUBECONFIG_FILE"
+
+# Cleanup function to remove temp file
+cleanup() {
+    rm -f "$KUBECONFIG_FILE"
+}
+trap cleanup EXIT
 
 # Deploy with Helm
 echo -e "\n${GREEN}Deploying Vista3D with Helm...${NC}"
