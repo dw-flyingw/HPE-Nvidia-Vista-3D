@@ -36,17 +36,27 @@ sudo usermod -a -G microk8s $USER
 newgrp microk8s  # or log out and back in
 ```
 
-### 2. (Optional) Load Images into MicroK8s
+### 2. Load Images into MicroK8s
 
-If you built images locally and haven't pushed them to a registry, load them into MicroK8s:
+You have two options:
 
+**Option A: Load locally built images (recommended for local testing)**
 ```bash
-# Import images into MicroK8s
-microk8s ctr image import <(docker save dwtwp/vista3d-frontend:microk8s-latest)
-microk8s ctr image import <(docker save dwtwp/vista3d-image-server:microk8s-latest)
+cd microk8s
+./load-images.sh
 ```
 
-Or if you have access to a registry, push the images and MicroK8s will pull them automatically.
+**Option B: Push to registry (for production or remote servers)**
+```bash
+# Push images to Docker Hub
+./build-images.sh v1.0.0 dwtwp yes
+
+# Or manually
+docker push dwtwp/vista3d-frontend:microk8s-latest
+docker push dwtwp/vista3d-image-server:microk8s-latest
+```
+
+MicroK8s will automatically pull images from the registry if they're pushed.
 
 ### 3. Set NGC API Key (Required for backend)
 
