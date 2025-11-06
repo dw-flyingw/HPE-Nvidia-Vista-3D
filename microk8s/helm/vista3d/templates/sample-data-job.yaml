@@ -1,0 +1,87 @@
+{{- if .Values.sampleData.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "vista3d.fullname" . }}-sample-data
+  labels:
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "vista3d.serviceAccountName" . }}
+      containers:
+      - name: install-sample-data
+        image: alpine:3.18
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          set -e
+          # Install required packages
+          apk update &amp;&amp; apk add --no-cache wget ca-certificates tar
+          # Check if already installed
+          if [ -d "/dicom/SAMPLE_DATA_001" ] &amp;&amp; [ -d "/output/SAMPLE_DATA_001" ]; then
+            echo "Sample data already installed, skipping"
+            exit 0
+          fi
+          # Download sample data
+          echo "Downloading sample data..."
+          wget {{ .Values.sampleData.url }} -O /tmp/sample_data.tgz
+          # Extract
+          echo "Extracting sample data..."
+          mkdir -p /tmp/extract
+          tar -xzf /tmp/sample_data.tgz -C /tmp/extract
+          # Install DICOM files
+          src_dicom="/tmp/extract/dicom/SAMPLE_DATA_001"
+          if [ -d "$src_dicom" ]; then
+            cp -r "$src_dicom" /dicom/
+            echo "Installed DICOM files to /dicom/"
+          fi
+          # Install output files
+          src_output="/tmp/extract/output"
+          if [ -d "$src_output" ]; then
+            for item in "$src_output"/*; do
+              if [ -e "$item" ] &amp;&amp; [ "$(basename "$item")" != ".DS_Store" ]; then
+                base_name="$(basename "$item")"
+                if [ -d "$item" ]; then
+                  cp -r "$item" /output/
+                else
+                  mkdir -p /output
+                  cp "$item" /output/
+                fi
+                echo "Installed $base_name"
+              fi
+            done
+            echo "Installed output files to /output/"
+          fi
+          # Fix voxel file structure
+          echo "Fixing voxel file structure..."
+          for patient_dir in /output/*/voxels/*; do
+            if [ -d "$patient_dir" ] &amp;&amp; [ -d "$patient_dir/original" ]; then
+              for orig_file in "$patient_dir/original"/*; do
+                if [ -e "$orig_file" ]; then
+                  mv "$orig_file" "$patient_dir/"
+                fi
+              done
+              rmdir "$patient_dir/original" 2&gt;/dev/null || true
+              echo "Fixed structure in $patient_dir"
+            fi
+          done
+          # Cleanup
+          rm -rf /tmp/extract /tmp/sample_data.tgz
+          echo "Sample data installation complete"
+        volumeMounts:
+        - name: dicom-data
+          mountPath: /dicom
+        - name: output-data
+          mountPath: /output
+      volumes:
+      - name: dicom-data
+        persistentVolumeClaim:
+          claimName: {{ include "vista3d.fullname" . }}-dicom-pvc
+      - name: output-data
+        persistentVolumeClaim:
+          claimName: {{ include "vista3d.fullname" . }}-output-pvc
+{{- end }}

@@ -117,6 +117,20 @@ if [ -n "$NGC_API_KEY" ]; then
     echo "  ✓ NGC API key provided - will be set in Helm deployment"
 fi
 
+# Sample Data Installation
+echo -e "\n${GREEN}Sample Data Installation...${NC}"
+INSTALL_SAMPLE_DATA=false
+read -p "  Install sample data? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    INSTALL_SAMPLE_DATA=true
+fi
+if [ "$INSTALL_SAMPLE_DATA" = true ]; then
+    echo "  ✓ Sample data installation enabled"
+else
+    echo "  ⚠️  Sample data installation skipped"
+fi
+
 # Check if Helm is available
 echo -e "\n${GREEN}[7/7] Checking Helm installation...${NC}"
 if ! command -v helm &> /dev/null; then
@@ -140,17 +154,24 @@ trap cleanup EXIT
 echo -e "\n${GREEN}Deploying Vista3D with Helm...${NC}"
 cd "$SCRIPT_DIR"
 
+NGC_SET="${NGC_API_KEY:+--set secrets.ngcApiKey=\"$NGC_API_KEY\"}"
+if [ "$INSTALL_SAMPLE_DATA" = true ]; then
+    SAMPLE_SET="--set sampleData.enabled=true"
+else
+    SAMPLE_SET=""
+fi
+
 if helm list -n "$NAMESPACE" | grep -q "$RELEASE_NAME"; then
     echo "  Release '$RELEASE_NAME' already exists. Upgrading..."
     helm upgrade "$RELEASE_NAME" "$HELM_CHART_DIR" \
         --namespace "$NAMESPACE" \
-        ${NGC_API_KEY:+--set secrets.ngcApiKey="$NGC_API_KEY"}
+        ${NGC_SET} ${SAMPLE_SET}
 else
     echo "  Installing release '$RELEASE_NAME'..."
     helm install "$RELEASE_NAME" "$HELM_CHART_DIR" \
         --namespace "$NAMESPACE" \
         --create-namespace \
-        ${NGC_API_KEY:+--set secrets.ngcApiKey="$NGC_API_KEY"}
+        ${NGC_SET} ${SAMPLE_SET}
 fi
 
 # Wait for pods to be ready
@@ -162,6 +183,18 @@ microk8s kubectl wait --for=condition=ready pod \
     echo -e "${YELLOW}Some pods may not be ready yet. Check status with:${NC}"
     echo "  microk8s kubectl get pods -n $NAMESPACE"
 }
+
+if [ "$INSTALL_SAMPLE_DATA" = true ]; then
+    echo -e "\n${GREEN}Waiting for sample data installation to complete...${NC}"
+    job_name="${RELEASE_NAME}-sample-data"
+    if microk8s kubectl wait --for=condition=complete job/"$job_name" -n "$NAMESPACE" --timeout=300s; then
+        echo -e "${GREEN}  ✓ Sample data installed successfully${NC}"
+    else
+        echo -e "${YELLOW}  ⚠️  Sample data installation job did not complete successfully. Check logs:${NC}"
+        echo "    microk8s kubectl logs job/$job_name -n $NAMESPACE"
+        echo "    microk8s kubectl describe job/$job_name -n $NAMESPACE"
+    fi
+fi
 
 # Display status
 echo -e "\n${GREEN}=== Deployment Status ===${NC}"
