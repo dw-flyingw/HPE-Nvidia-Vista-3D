@@ -1,0 +1,72 @@
+global:
+  imageRegistry: ""        # Optional global prefix, e.g. "registry.myco.local/library/"
+  imagePullSecrets:
+    - name: regcred        # Pre-create in Rancher cluster if pulling from a private registry
+
+backend:
+  image:
+    repository: nvcr.io/nim/nvidia/vista3d
+    tag: "1.0.0"
+  nodeSelector:
+    nvidia.com/gpu.present: "true"
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+  env:
+    IMAGE_SERVER: "http://vista3d-image-server:8888"
+    VISTA3D_SERVER: "http://localhost:8000"
+  volumeMounts:
+    - name: output-data
+      mountPath: /workspace/output
+
+frontend:
+  image:
+    repository: dwtwp/vista3d-frontend
+    tag: microk8s-latest
+  env:
+    STREAMLIT_SERVER_RUN_ON_SAVE: "false"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+imageServer:
+  image:
+    repository: dwtwp/vista3d-image-server
+    tag: microk8s-latest
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+
+persistence:
+  storageClass: longhorn
+  output:
+    size: 200Gi
+  dicom:
+    size: 100Gi
+
+secrets:
+  create: true
+  ngcApiKey: ""            # Set via --set-file secrets.ngcApiKey=ngc.key or Rancher UI
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: vista3d.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - vista3d.example.com
+      secretName: vista3d-tls
+

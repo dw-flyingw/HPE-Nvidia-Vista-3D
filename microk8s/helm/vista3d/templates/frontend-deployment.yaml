@@ -18,8 +18,12 @@ spec:
         {{- include "vista3d.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: frontend
     spec:
-      {{- with .Values.serviceAccount.create }}
+      {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
       serviceAccountName: {{ include "vista3d.serviceAccountName" $ }}
+      {{- end }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ .Values.frontend.name }}

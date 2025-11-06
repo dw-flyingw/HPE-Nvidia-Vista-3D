@@ -3,8 +3,8 @@
 # Declare variables to be passed into your templates.
 
 global:
-  imageRegistry: ""
-  imagePullSecrets: []
+  imageRegistry: ""  # Optional: set to "<registry>/" to prefix all images
+  imagePullSecrets: []  # e.g. [{ name: regcred }]
 
 # Backend configuration (NVIDIA NIM Vista3D)
 backend:
@@ -185,6 +185,7 @@ imageServer:
 # Persistence configuration
 persistence:
   enabled: true
+  storageClass: ""  # Fallback storage class for all PVCs if specific ones are unset
   output:
     enabled: true
     accessMode: ReadWriteOnce

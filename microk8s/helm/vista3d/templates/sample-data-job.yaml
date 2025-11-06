@@ -9,7 +9,13 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
       serviceAccountName: {{ include "vista3d.serviceAccountName" . }}
+      {{- end }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: install-sample-data
         image: alpine:3.18
