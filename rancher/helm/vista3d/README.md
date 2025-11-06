@@ -34,7 +34,7 @@ Packaging & Publishing
 Package the chart and either upload it to a Helm repository or import into Rancher as a Catalog app:
 
 ```bash
-cd microk8s/helm
+cd rancher/helm
 make lint
 make package
 
