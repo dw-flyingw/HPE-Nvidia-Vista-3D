@@ -5,3 +5,82 @@ export NGC_API_KEY='nvapi-AX__kVWLjN9w2OcBXGG5N_34NY37D-CYdFPipD_QVB4uopODNFxNTs
 ./rancher/helm/NGC_API_KEY
 
 
+export RANCHER_TOKEN='4vrrl2xgmgtzdf8ld46vgds2ttq4vccw9p2p6mssc7fnr4f8m27pl8'
+
+access key
+token-kv928
+
+secret key
+4vrrl2xgmgtzdf8ld46vgds2ttq4vccw9p2p6mssc7fnr4f8m27pl8
+
+bearer token
+token-kv928:4vrrl2xgmgtzdf8ld46vgds2ttq4vccw9p2p6mssc7fnr4f8m27pl8
+
+
+rancher login https://localhost:8443 --skip-verify --token token-kv928:4vrrl2xgmgtzdf8ld46vgds2ttq4vccw9p2p6mssc7fnr4f8m27pl8
+
+
+AdminToken2
+token-m8nbw
+2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm
+token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm
+
+rancher clusters ls
+
+./rancher/setup_rancher_env.sh \
+  --rancher-url https://localhost:8443 \
+  --rancher-token token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm \
+  --cluster local \
+  --ngc-key-file ~/path/to/ngc.key \
+  --skip-pull-secret   # only if you don’t need a registry credential
+
+
+export RANCHER_TOKEN='token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm'
+
+
+
+./rancher/setup_rancher_env.sh \
+  --rancher-url https://localhost:8443 \
+  --rancher-token token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm \
+  --cluster local \
+  --ngc-key-file /home/hpadmin/NGC_API_KEY
+
+
+
+export KUBECONFIG=/home/hpadmin/.kube/vista3d-rancher.yaml
+
+
+   rancher login https://localhost:8443 \
+     --skip-verify \
+     --token token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm \
+     --context local \
+     --set-default
+
+./rancher/setup_rancher_env.sh \
+  --rancher-url https://localhost:8443 \
+  --rancher-token token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm \
+  --cluster local \
+  --ngc-key-file /home/hpadmin/NGC_API_KEY
+
+ rancher projects ls
+ID              NAME      STATE     DESCRIPTION
+local:p-2fzct   Default   active    Default project created for the cluster
+local:p-88wcg   System    active    System project created for the cluster
+
+
+   rancher login https://localhost:8443 \
+     --skip-verify \
+     --token token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm \
+     --context local:p-2fzct \
+     --set-default
+
+INFO[0000] Saving config to /home/hpadmin/.rancher/cli2.json 
+
+
+./rancher/setup_rancher_env.sh \
+  --rancher-url https://localhost:8443 \
+  --rancher-token token-m8nbw:2kctcsv2rdhcz66j6gqjdmsvhsdp7x7t6z848w82jv5z4fgf5kblnm \
+  --cluster local \
+  --ngc-key-file /home/hpadmin/NGC_API_KEY
+
+

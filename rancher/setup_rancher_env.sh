@@ -28,6 +28,8 @@ Options:
   --registry-username USER   Username for the registry pull secret
   --registry-password PASS   Password/token for the registry pull secret
   --registry-email EMAIL     Email for the registry pull secret (optional)
+  --rancher-context ID       Rancher project context (e.g. local:p-xxxxx) to avoid interactive prompt
+  --skip-tls-verify          Pass --skip-verify to Rancher CLI login
   --non-interactive          Fail instead of prompting for missing inputs
   --force-login              Force re-login and kubeconfig download even if cached
   --skip-secret              Skip creating/replacing the vista3d-secrets secret
@@ -195,6 +197,8 @@ SKIP_SECRET=false
 SKIP_PULL_SECRET=false
 REGISTRY_NAME=regcred
 KUBECTL_CONTEXT=""
+RANCHER_CONTEXT=${RANCHER_CONTEXT:-}
+RANCHER_SKIP_VERIFY=false
 
 RANCHER_URL=${RANCHER_URL:-}
 RANCHER_TOKEN=${RANCHER_TOKEN:-}
@@ -236,6 +240,10 @@ while [[ $# -gt 0 ]]; do
       REGISTRY_NAME="$2"; shift 2 ;;
     --context)
       KUBECTL_CONTEXT="$2"; shift 2 ;;
+    --rancher-context)
+      RANCHER_CONTEXT="$2"; shift 2 ;;
+    --skip-tls-verify)
+      RANCHER_SKIP_VERIFY=true; shift ;;
     --non-interactive)
       NON_INTERACTIVE=true; shift ;;
     --force-login)
@@ -288,6 +296,12 @@ fi
 login_args=(login "$RANCHER_URL" --token "$RANCHER_TOKEN")
 if [[ "$FORCE_LOGIN" == true ]]; then
   login_args+=(--cleanup)
+fi
+if [[ "$RANCHER_SKIP_VERIFY" == true ]]; then
+  login_args+=(--skip-verify)
+fi
+if [[ -n "$RANCHER_CONTEXT" ]]; then
+  login_args+=(--context "$RANCHER_CONTEXT")
 fi
 
 echo "Logging into Rancher CLI"
