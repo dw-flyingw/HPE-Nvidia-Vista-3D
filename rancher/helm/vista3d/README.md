@@ -51,6 +51,25 @@ Installation via Rancher UI
 3. Upload the NGC API key as a secret (Rancher will create it) or pre-create it in the namespace and reference via `global.imagePullSecrets`.
 4. Launch the app and monitor the workloads under **Workload → Deployments** to verify the desired containers (`nvcr.io/nim/nvidia/vista3d`, `dwtwp/vista3d-frontend`, `dwtwp/vista3d-image-server`) are running.
 
+Scripted Deployment (RKE2 CLI)
+------------------------------
+Operators with `kubectl` access to the Rancher-managed RKE2 cluster can use the helper script in `rancher/helm/deploy-vista3d.sh` to perform a repeatable CLI deployment.
+
+```bash
+cd rancher/helm
+./deploy-vista3d.sh \
+  --ngc-key-file /secure/path/ngc.key \
+  --namespace vista3d \
+  --set ingress.hosts[0].host=vista3d.example.com
+```
+
+Key details:
+- The script wraps `helm upgrade --install` with the Rancher-oriented defaults from `vista3d/values-rancher.yaml`.
+- `--ngc-key-file` (or `NGC_API_KEY_FILE`) points to a local file containing the NGC API key so the chart can populate the secret required by the backend pod.
+- Supply additional Helm overrides via repeated `--set` flags or by pointing `--values` to a custom values file.
+- Use `--dry-run` to preview manifests and `--skip-ngc` if the secret already exists in the namespace.
+- After the command completes, monitor the rollout with `kubectl get pods -n <namespace>`.
+
 Validation
 ----------
 - Confirm PVCs are bound (`kubectl get pvc -n vista3d`).
