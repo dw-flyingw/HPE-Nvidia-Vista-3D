@@ -3,6 +3,7 @@ Configuration Manager for Vista3D Application
 Handles loading and caching of configuration files to avoid repeated I/O operations.
 """
 
+import hashlib
 import json
 import os
 from typing import Dict, List, Optional, Any
@@ -20,12 +21,20 @@ class ConfigManager:
         self._label_colors: Optional[List[Dict[str, Any]]] = None
         self._label_dict: Optional[Dict[str, int]] = None
         self._label_sets: Optional[Dict[str, Any]] = None
+        self._using_fallback_label_colors: bool = False
 
     @property
     def label_colors(self) -> List[Dict[str, Any]]:
         """Load and cache label colors configuration."""
         if self._label_colors is None:
-            self._label_colors = self._load_json("vista3d_label_colors.json")
+            label_colors = self._load_json("vista3d_label_colors.json")
+            if label_colors:
+                self._label_colors = label_colors
+                self._using_fallback_label_colors = False
+            else:
+                self._label_colors = self._generate_default_label_colors()
+                self._using_fallback_label_colors = True
+                print("Warning: Using generated fallback colors for anatomical labels - conf/vista3d_label_colors.json was not found")
         return self._label_colors or []
 
     @property
@@ -73,13 +82,15 @@ class ConfigManager:
     def create_filename_to_id_mapping(self) -> Dict[str, int]:
         """Create mapping from expected filenames to label IDs."""
         filename_to_id = {}
-        for item in self.label_colors:
-            label_id = item.get('id')
-            label_name = item.get('name')
-            if label_id is not None and label_name:
-                # Convert name to expected filename format
-                expected_filename = label_name.lower().replace(' ', '_').replace('-', '_') + '.nii.gz'
-                filename_to_id[expected_filename] = label_id
+        for label_name, label_id in self.label_dict.items():
+            if label_id is None:
+                continue
+            # Skip background label (0) - there is no voxel file for it
+            if int(label_id) == 0:
+                continue
+
+            expected_filename = label_name.lower().replace(' ', '_').replace('-', '_') + '.nii.gz'
+            filename_to_id[expected_filename] = int(label_id)
         return filename_to_id
 
     def refresh_cache(self):
@@ -87,3 +98,28 @@ class ConfigManager:
         self._label_colors = None
         self._label_dict = None
         self._label_sets = None
+
+    def _generate_default_label_colors(self) -> List[Dict[str, Any]]:
+        """Generate deterministic fallback colors when label colors config is missing."""
+        generated_colors: List[Dict[str, Any]] = []
+        label_dict = self.label_dict
+
+        if not label_dict:
+            return generated_colors
+
+        # Sort by label ID for deterministic ordering
+        for name, label_id in sorted(label_dict.items(), key=lambda item: item[1]):
+            if label_id == 0:
+                color = [0, 0, 0]
+            else:
+                # Generate pseudo-random but deterministic bright colors per label name
+                digest = hashlib.sha1(name.encode('utf-8')).digest()
+                color = [64 + digest[0] % 192, 64 + digest[1] % 192, 64 + digest[2] % 192]
+
+            generated_colors.append({
+                "id": label_id,
+                "name": name,
+                "color": color
+            })
+
+        return generated_colors
