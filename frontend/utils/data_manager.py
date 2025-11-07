@@ -5,6 +5,7 @@ Handles all server interactions and data fetching operations.
 
 import os
 import re
+from urllib.parse import urlparse, urljoin
 import requests
 from typing import List, Dict, Optional, Tuple, Set
 from bs4 import BeautifulSoup
@@ -174,52 +175,85 @@ class DataManager:
         try:
             # Folder structure: /output/patient/voxels/scan_name/
             ct_scan_folder_name = filename.replace('.nii.gz', '').replace('.nii', '')
-            
+
             voxels_folder_url = f"{self.image_server_url}/output/{patient_id}/voxels/{ct_scan_folder_name}/"
             print(f"DEBUG: Using voxel directory: {voxels_folder_url}")
 
-            resp = requests.get(voxels_folder_url, timeout=SERVER_TIMEOUT)
-            print(f"DEBUG: Response status: {resp.status_code}")
+            def collect_voxel_files(url: str, depth: int = 0, visited: Set[str] = None) -> List[str]:
+                """Recursively collect voxel files from directory listings."""
+                if visited is None:
+                    visited = set()
 
-            if resp.status_code != 200:
-                print(f"DEBUG: Failed to access voxels directory. Status: {resp.status_code}")
-                return set(), {}
+                normalized_url = url.rstrip('/') + '/' if not url.endswith('/') else url
+                if normalized_url in visited:
+                    return []
+                visited.add(normalized_url)
 
-            # Parse directory listing to find individual voxel files
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            voxel_files = []
-            for link in soup.find_all('a'):
-                href = link.get('href')
-                if href and href.endswith('.nii.gz') and not href.startswith('..'):
-                    voxel_files.append(href)
+                try:
+                    resp_inner = requests.get(normalized_url, timeout=SERVER_TIMEOUT)
+                except requests.RequestException as exc:  # pragma: no cover - defensive logging
+                    print(f"DEBUG: Error accessing {normalized_url}: {exc}")
+                    return []
+
+                print(f"DEBUG: [{depth}] Response status for {normalized_url}: {resp_inner.status_code}")
+                if resp_inner.status_code != 200:
+                    return []
+
+                soup_inner = BeautifulSoup(resp_inner.text, 'html.parser')
+                files: List[str] = []
+                for link in soup_inner.find_all('a'):
+                    href = link.get('href')
+                    if not href or href.startswith('..'):
+                        continue
+                    if href.endswith('.nii.gz'):
+                        file_url = href if href.startswith('http') else urljoin(normalized_url, href)
+                        files.append(file_url)
+                    elif href.endswith('/'):
+                        # Explore subdirectories (e.g., "original/")
+                        child_url = urljoin(normalized_url, href)
+                        files.extend(collect_voxel_files(child_url, depth + 1, visited))
+                return files
+
+            voxel_files = collect_voxel_files(voxels_folder_url)
+            # Remove duplicates while preserving order
+            if voxel_files:
+                voxel_files = list(dict.fromkeys(voxel_files))
+
+            # Convert file URLs to paths relative to the scan folder
+            base_path = urlparse(voxels_folder_url).path
+            normalized_base_path = base_path if base_path.endswith('/') else f"{base_path}/"
+            relative_voxel_paths: List[str] = []
+            for file_url in voxel_files:
+                parsed_path = urlparse(file_url).path
+                if parsed_path.startswith(normalized_base_path):
+                    relative_path = parsed_path[len(normalized_base_path):].lstrip('/')
+                else:
+                    relative_path = parsed_path.split('/')[-1]
+                relative_voxel_paths.append(relative_path)
 
             if __debug__:
-                print(f"DEBUG: Found {len(voxel_files)} voxel files: {voxel_files}")
+                print(f"DEBUG: Found {len(relative_voxel_paths)} voxel files: {relative_voxel_paths}")
 
             # Find which label IDs are available based on existing voxel files
             available_ids = set()
             matched_files = []
-            for voxel_file in voxel_files:
+            id_to_filename: Dict[int, str] = {}
+            for relative_path in relative_voxel_paths:
                 # Extract just the filename from the full path
-                filename_only = voxel_file.split('/')[-1]
+                filename_only = relative_path.split('/')[-1]
                 if filename_only in filename_to_id_mapping:
-                    available_ids.add(filename_to_id_mapping[filename_only])
+                    label_id = filename_to_id_mapping[filename_only]
+                    available_ids.add(label_id)
                     matched_files.append(filename_only)
+                    id_to_filename[label_id] = relative_path
 
             if __debug__:
                 print(f"DEBUG: Matched {len(matched_files)} files to label IDs: {matched_files}")
                 print(f"DEBUG: Available label IDs: {available_ids}")
 
             # Create id_to_name mapping for available labels
-            # Convert filenames back to label names by removing .nii.gz and converting underscores to spaces
-            id_to_name = {}
-            for filename, label_id in filename_to_id_mapping.items():
-                if label_id in available_ids:
-                    # Convert filename to label name: "aorta.nii.gz" -> "aorta"
-                    label_name = filename.replace('.nii.gz', '').replace('_', ' ')
-                    id_to_name[label_id] = label_name
-
-            return available_ids, id_to_name
+            # Use the actual relative file paths for precise overlay loading
+            return available_ids, id_to_filename
 
         except Exception as e:
             print(f"Error fetching available voxel labels: {e}")

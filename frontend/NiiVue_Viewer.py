@@ -231,7 +231,7 @@ def render_sidebar():
                 st.markdown("Select Voxels")
                 
                 # Get available voxels
-                available_ids, id_to_name_map, available_voxel_names = voxel_manager.get_available_voxels(
+                available_ids, id_to_path_map, available_voxel_names = voxel_manager.get_available_voxels(
                     selected_patient, selected_file
                 )
                 

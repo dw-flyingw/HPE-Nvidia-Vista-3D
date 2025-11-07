@@ -88,7 +88,7 @@ class VoxelManager:
     ) -> Tuple[Set[int], Dict[int, str], List[str]]:
         """
         Get available voxel information for the given patient and file.
-        Returns (available_ids, id_to_name_map, available_voxel_names).
+        Returns (available_ids, id_to_path_map, available_voxel_names).
         """
         # Return empty results if filename is None
         if filename is None:
@@ -100,7 +100,7 @@ class VoxelManager:
         # Query server for actually available voxel files
         filename_to_id = self.config.create_filename_to_id_mapping()
             
-        available_ids, id_to_name_map = self.data.fetch_available_voxel_labels(
+        available_ids, id_to_path_map = self.data.fetch_available_voxel_labels(
             patient_id, filename, filename_to_id
         )
 
@@ -113,7 +113,7 @@ class VoxelManager:
                     continue
                 available_voxel_names.append(name)
 
-        return available_ids, id_to_name_map, sorted(available_voxel_names)
+        return available_ids, id_to_path_map, sorted(available_voxel_names)
 
     def create_overlays(
         self,
@@ -142,17 +142,26 @@ class VoxelManager:
         scan_modality = self._detect_scan_modality(patient_id, filename)
         
         # Get available voxels to check if all are selected
-        available_ids, id_to_name_map, available_voxel_names = self.get_available_voxels(
+        available_ids, id_to_path_map, available_voxel_names = self.get_available_voxels(
             patient_id, filename
         )
+
+        # Determine if voxel files share a common subdirectory (e.g., "original/")
+        path_prefixes = {
+            path.rsplit('/', 1)[0]
+            for path in id_to_path_map.values()
+            if '/' in path
+        }
+        common_prefix = path_prefixes.pop() if len(path_prefixes) == 1 else ''
         
         # If all available voxels are selected, use all.nii.gz for better performance
         if available_voxel_names and set(selected_voxels) == set(available_voxel_names):
             print(f"DEBUG: All {len(available_voxel_names)} voxels selected - loading all.nii.gz")
+            all_relative_path = f"{common_prefix}/all.nii.gz" if common_prefix else "all.nii.gz"
             overlays.append({
                 'label_id': 'all',
                 'label_name': 'All Segmentation',
-                'url': f"{base_url}/{OUTPUT_DIR}/{patient_id}/{VOXELS_DIR}/{ct_scan_folder_name}/all.nii.gz",
+                'url': f"{base_url}/{OUTPUT_DIR}/{patient_id}/{VOXELS_DIR}/{ct_scan_folder_name}/{all_relative_path}",
                 'use_custom_colormap': True  # Flag to use customSegmentationColormap
             })
             return overlays
@@ -173,10 +182,14 @@ class VoxelManager:
                 # Get color for this label
                 label_color = self.config.get_label_color(label_id)
 
+                relative_path = id_to_path_map.get(label_id)
+                if not relative_path:
+                    relative_path = f"{common_prefix}/{voxel_filename}" if common_prefix else voxel_filename
+
                 overlays.append({
                     'label_id': label_id,
                     'label_name': voxel_name,
-                    'url': f"{base_url}/{OUTPUT_DIR}/{patient_id}/{VOXELS_DIR}/{ct_scan_folder_name}/{voxel_filename}",
+                    'url': f"{base_url}/{OUTPUT_DIR}/{patient_id}/{VOXELS_DIR}/{ct_scan_folder_name}/{relative_path}",
                     'color': label_color
                 })
         
