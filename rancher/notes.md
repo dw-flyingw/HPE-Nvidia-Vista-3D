@@ -114,3 +114,19 @@ kubectl get storageclass
 
 
 
+   kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml -n vista3d delete secret ngc-regcred --ignore-not-found
+
+   kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml \
+     -n vista3d create secret docker-registry ngc-regcred \
+     --docker-server=nvcr.io \
+     --docker-username='$oauthtoken' \
+     --docker-password="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"\
+
+
+   kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml \
+     -n vista3d create secret docker-registry ngc-regcred \
+     --docker-server=nvcr.io \
+     --docker-username='$oauthtoken' \
+     --docker-password="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" \
+     --docker-email=dave.wright@hpe.com
+

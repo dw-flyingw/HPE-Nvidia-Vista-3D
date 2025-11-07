@@ -148,6 +148,8 @@ spec:
         app.kubernetes.io/component: backend
     spec:
       serviceAccountName: vista3d
+      imagePullSecrets:
+        - name: ngc-regcred
       containers:
         - name: vista3d-backend
           image: "nvcr.io/nim/nvidia/vista3d:1.0.0"
@@ -341,6 +343,8 @@ spec:
         app.kubernetes.io/component: frontend
     spec:
       serviceAccountName: vista3d
+      imagePullSecrets:
+        - name: ngc-regcred
       containers:
         - name: vista3d-frontend
           image: "dwtwp/vista3d-frontend:microk8s-latest"
@@ -415,6 +419,8 @@ spec:
         app.kubernetes.io/component: image-server
     spec:
       serviceAccountName: vista3d
+      imagePullSecrets:
+        - name: ngc-regcred
       containers:
         - name: vista3d-image-server
           image: "dwtwp/vista3d-image-server:microk8s-latest"
