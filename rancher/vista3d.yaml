@@ -1,0 +1,457 @@
+---
+# Source: vista3d/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vista3d
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: vista3d/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vista3d-output-pvc
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: local-path
+---
+# Source: vista3d/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vista3d-dicom-pvc
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: local-path
+---
+# Source: vista3d/templates/backend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vista3d-backend
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/component: backend
+---
+# Source: vista3d/templates/frontend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vista3d-frontend
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8501
+      targetPort: 8501
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/component: frontend
+---
+# Source: vista3d/templates/image-server-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vista3d-image-server
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: image-server
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8888
+      targetPort: 8888
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/component: image-server
+---
+# Source: vista3d/templates/backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vista3d-backend
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vista3d
+      app.kubernetes.io/instance: vista3d
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vista3d
+        app.kubernetes.io/instance: vista3d
+        app.kubernetes.io/component: backend
+    spec:
+      serviceAccountName: vista3d
+      containers:
+        - name: vista3d-backend
+          image: "nvcr.io/nim/nvidia/vista3d:1.0.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: ALLOW_ABSOLUTE_FILE_PATHS
+              value: "True"
+            - name: ALLOW_ABSOLUTE_PATHS
+              value: "True"
+            - name: ALLOW_ANY_HOST
+              value: "True"
+            - name: ALLOW_ANY_IMAGE_SERVER_HOST
+              value: "True"
+            - name: ALLOW_ANY_IP_ACCESS
+              value: "True"
+            - name: ALLOW_ANY_ORIGIN
+              value: "True"
+            - name: ALLOW_CROSS_ORIGIN
+              value: "True"
+            - name: ALLOW_EXTERNAL_NETWORK_ACCESS
+              value: "True"
+            - name: ALLOW_FILE_PROTOCOL
+              value: "True"
+            - name: ALLOW_HTTPS_ACCESS
+              value: "True"
+            - name: ALLOW_HTTP_ACCESS
+              value: "True"
+            - name: ALLOW_IMAGE_SERVER_ACCESS
+              value: "True"
+            - name: ALLOW_LOCALHOST
+              value: "True"
+            - name: ALLOW_LOCAL_FILES
+              value: "True"
+            - name: ALLOW_LOCAL_PATHS
+              value: "True"
+            - name: ALLOW_LOOPBACK
+              value: "True"
+            - name: ALLOW_PRIVATE_IPS
+              value: "True"
+            - name: ALLOW_PUBLIC_IPS
+              value: "True"
+            - name: ALLOW_RELATIVE_FILE_PATHS
+              value: "True"
+            - name: ALLOW_RELATIVE_PATHS
+              value: "True"
+            - name: ALLOW_REMOTE_ACCESS
+              value: "True"
+            - name: ALLOW_WILDCARD_HOSTS
+              value: "True"
+            - name: CORS_ALLOW_CREDENTIALS
+              value: "True"
+            - name: CORS_ALLOW_HEADERS
+              value: "*"
+            - name: CORS_ALLOW_METHODS
+              value: "GET,POST,PUT,DELETE,OPTIONS"
+            - name: CORS_ALLOW_ORIGINS
+              value: "*"
+            - name: CORS_EXPOSE_HEADERS
+              value: "*"
+            - name: CORS_MAX_AGE
+              value: "3600"
+            - name: CUDA_LAUNCH_BLOCKING
+              value: "1"
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+            - name: DISABLE_CORS
+              value: "True"
+            - name: DISABLE_DOMAIN_WHITELIST
+              value: "True"
+            - name: DISABLE_HOST_VALIDATION
+              value: "True"
+            - name: DISABLE_IMAGE_SERVER_VALIDATION
+              value: "True"
+            - name: DISABLE_IP_VALIDATION
+              value: "True"
+            - name: DISABLE_NETWORK_RESTRICTIONS
+              value: "True"
+            - name: DISABLE_ORIGIN_VALIDATION
+              value: "True"
+            - name: DISABLE_URL_VALIDATION
+              value: "True"
+            - name: DOMAIN_WHITELIST
+              value: "[\".*\",\"http://.*\",\"https://.*\",\"http://.*:.*\",\"https://.*:.*\",\"file:///.*\",\"*\"]"
+            - name: ENABLE_CONTAINER_PATHS
+              value: "True"
+            - name: ENABLE_EXTERNAL_ACCESS
+              value: "True"
+            - name: ENABLE_FILE_ACCESS
+              value: "True"
+            - name: FILE_ACCESS_MODE
+              value: "local"
+            - name: IGNORE_SSL_ERRORS
+              value: "True"
+            - name: IMAGE_SERVER
+              value: "http://vista3d-image-server:8888"
+            - name: IMAGE_URI_ALLOW_REDIRECTS
+              value: "True"
+            - name: IMAGE_URI_HTTPS_ONLY
+              value: "False"
+            - name: LOCAL_FILE_ACCESS
+              value: "True"
+            - name: LOCAL_NIM_CACHE
+              value: "/workspace/.cache/nim"
+            - name: NGC_ORG_ID
+              value: ""
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "0"
+            - name: SUPPORTED_IMAGE_EXT
+              value: "[\".nrrd\",\".nii\",\".nii.gz\",\".dcm\"]"
+            - name: TORCH_USE_CUDA_DSA
+              value: "1"
+            - name: VISTA3D_ALLOW_ANY_URL
+              value: "True"
+            - name: VISTA3D_ALLOW_EXTERNAL_IMAGES
+              value: "True"
+            - name: VISTA3D_ALLOW_HTTPS_DOWNLOADS
+              value: "True"
+            - name: VISTA3D_ALLOW_HTTP_DOWNLOADS
+              value: "True"
+            - name: VISTA3D_ALLOW_INSECURE_CONNECTIONS
+              value: "True"
+            - name: VISTA3D_ALLOW_REMOTE_FILES
+              value: "True"
+            - name: VISTA3D_DISABLE_FILE_VALIDATION
+              value: "True"
+            - name: VISTA3D_DISABLE_IMAGE_VALIDATION
+              value: "True"
+            - name: VISTA3D_DISABLE_SSL_VERIFICATION
+              value: "True"
+            - name: VISTA3D_DISABLE_URL_VALIDATION
+              value: "True"
+            - name: VISTA3D_ENABLE_NETWORK_ACCESS
+              value: "True"
+            - name: VISTA3D_MAX_RETRIES
+              value: "3"
+            - name: VISTA3D_SERVER
+              value: "http://localhost:8000"
+            - name: VISTA3D_TIMEOUT
+              value: "300"
+            - name: WORKSPACE_IMAGES_PATH
+              value: "/workspace/output/nifti"
+            - name: WORKSPACE_OUTPUTS_PATH
+              value: "/workspace/output"
+            - name: WORKSPACE_ROOT
+              value: "/workspace"
+          resources:
+            limits:
+              cpu: "4"
+              memory: 16Gi
+            requests:
+              cpu: "2"
+              memory: 8Gi
+          volumeMounts:
+            - mountPath: /workspace/output
+              name: output-data
+      volumes:
+        - name: output-data
+          persistentVolumeClaim:
+            claimName: vista3d-output-pvc
+---
+# Source: vista3d/templates/frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vista3d-frontend
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vista3d
+      app.kubernetes.io/instance: vista3d
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vista3d
+        app.kubernetes.io/instance: vista3d
+        app.kubernetes.io/component: frontend
+    spec:
+      serviceAccountName: vista3d
+      containers:
+        - name: vista3d-frontend
+          image: "dwtwp/vista3d-frontend:microk8s-latest"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8501
+              protocol: TCP
+          env:
+            - name: VISTA3D_SERVER
+              value: "http://vista3d-backend:8000"
+            - name: IMAGE_SERVER
+              value: "http://vista3d-image-server:8888"
+            - name: EXTERNAL_IMAGE_SERVER
+              value: "http://vista3d-image-server:8888"
+            - name: VISTA3D_IMAGE_SERVER_URL
+              value: "http://vista3d-image-server:8888"
+            - name: DICOM_FOLDER
+              value: "/app/dicom"
+            - name: DOCKER_CONTAINER
+              value: "true"
+            - name: OUTPUT_FOLDER
+              value: "/app/output"
+            - name: STREAMLIT_SERVER_FILE_WATCHER_TYPE
+              value: "auto"
+            - name: STREAMLIT_SERVER_RUN_ON_SAVE
+              value: "false"
+          volumeMounts:
+            - name: output-data
+              mountPath: /app/output
+            - name: dicom-data
+              mountPath: /app/dicom
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: output-data
+          persistentVolumeClaim:
+            claimName: vista3d-output-pvc
+        - name: dicom-data
+          persistentVolumeClaim:
+            claimName: vista3d-dicom-pvc
+---
+# Source: vista3d/templates/image-server-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vista3d-image-server
+  labels:
+    helm.sh/chart: vista3d-1.4.0
+    app.kubernetes.io/name: vista3d
+    app.kubernetes.io/instance: vista3d
+    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: image-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vista3d
+      app.kubernetes.io/instance: vista3d
+      app.kubernetes.io/component: image-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vista3d
+        app.kubernetes.io/instance: vista3d
+        app.kubernetes.io/component: image-server
+    spec:
+      serviceAccountName: vista3d
+      containers:
+        - name: vista3d-image-server
+          image: "dwtwp/vista3d-image-server:microk8s-latest"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+          env:
+            - name: DICOM_FOLDER
+              value: "/data/dicom"
+            - name: IMAGE_SERVER
+              value: "http://localhost:8888"
+            - name: OUTPUT_FOLDER
+              value: "/data/output"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - mountPath: /data/output
+              name: output-data
+              readOnly: true
+            - mountPath: /data/dicom
+              name: dicom-data
+              readOnly: true
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: output-data
+          persistentVolumeClaim:
+            claimName: vista3d-output-pvc
+        - name: dicom-data
+          persistentVolumeClaim:
+            claimName: vista3d-dicom-pvc
