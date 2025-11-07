@@ -159,6 +159,11 @@ spec:
               containerPort: 8000
               protocol: TCP
           env:
+            - name: NGC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vista3d-secrets
+                  key: ngc-api-key
             - name: ALLOW_ABSOLUTE_FILE_PATHS
               value: "True"
             - name: ALLOW_ABSOLUTE_PATHS
@@ -347,7 +352,7 @@ spec:
         - name: ngc-regcred
       containers:
         - name: vista3d-frontend
-          image: "dwtwp/vista3d-frontend:microk8s-latest"
+          image: "dwtwp/vista3d-frontend:latest"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -423,7 +428,7 @@ spec:
         - name: ngc-regcred
       containers:
         - name: vista3d-image-server
-          image: "dwtwp/vista3d-image-server:microk8s-latest"
+          image: "dwtwp/vista3d-image-server:latest"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
