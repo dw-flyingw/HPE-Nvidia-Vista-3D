@@ -203,7 +203,11 @@ fi
 mkdir -p "$(dirname "$OUTPUT_PATH")"
 
 if [[ -z "$OVERRIDE_PATH" ]]; then
-  OVERRIDE_PATH=$(mktemp)
+  if ! OVERRIDE_PATH=$(mktemp 2>/dev/null); then
+    fallback_dir="$SCRIPT_DIR/tmp"
+    mkdir -p "$fallback_dir"
+    OVERRIDE_PATH=$(mktemp -p "$fallback_dir")
+  fi
   CLEANUP_OVERRIDE=true
 else
   CLEANUP_OVERRIDE=false

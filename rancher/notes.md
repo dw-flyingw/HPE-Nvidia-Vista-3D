@@ -84,3 +84,18 @@ INFO[0000] Saving config to /home/hpadmin/.rancher/cli2.json
   --ngc-key-file /home/hpadmin/NGC_API_KEY
 
 
+export KUBECONFIG=/home/hpadmin/.kube/vista3d-rancher.yaml
+kubectl get storageclass          # see what exists, e.g. local-path
+
+
+export KUBECONFIG=/home/hpadmin/.kube/vista3d-rancher.yaml
+kubectl config get-contexts      # optional sanity check
+kubectl get storageclass
+
+   /var/lib/rancher/rke2/bin/kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml get storageclass
+
+   unalias kubectl          # only affects current shell
+   hash -r
+   kubectl version --client
+
+
