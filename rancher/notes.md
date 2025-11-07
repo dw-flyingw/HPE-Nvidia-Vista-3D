@@ -99,3 +99,18 @@ kubectl get storageclass
    kubectl version --client
 
 
+
+
+./rancher/render_vista3d_manifest.sh \
+  --namespace vista3d \
+  --storage-class longhorn \
+  --output ./rancher/vista3d.yaml
+
+
+   /var/lib/rancher/rke2/bin/kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml apply -f ./rancher/vista3d.yaml
+
+
+
+
+
+
