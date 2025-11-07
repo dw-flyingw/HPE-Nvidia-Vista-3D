@@ -154,6 +154,8 @@ spec:
               value: "auto"
             - name: STREAMLIT_SERVER_RUN_ON_SAVE
               value: "false"
+            - name: PYTHONPATH
+              value: "/app"
           volumeMounts:
             - name: output-data
               mountPath: /app/output

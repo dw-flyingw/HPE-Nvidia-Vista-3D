@@ -130,3 +130,6 @@ kubectl get storageclass
      --docker-password="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" \
      --docker-email=dave.wright@hpe.com
 
+
+kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml \
+  -n vista3d port-forward svc/vista3d-frontend 8501:8501
