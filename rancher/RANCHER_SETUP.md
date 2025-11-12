@@ -17,6 +17,18 @@ Optional but recommended:
 - TLS hostname and secret (or plan to port-forward the frontend).
 - Ability to run `./rancher/diagnostics.sh` on the target host for quick health snapshots when debugging.
 
+### Configure Defaults Once
+
+To run `bootstrap_vista3d.sh` without passing flags every time:
+
+1. Copy the sample configuration and edit it with your values (token, context, etc.):
+   ```bash
+   cp ./rancher/bootstrap_defaults.env.example ./rancher/bootstrap_defaults.env
+   ```
+2. Populate `DEFAULT_RANCHER_TOKEN`, `DEFAULT_RANCHER_CONTEXT`, `DEFAULT_NGC_KEY_FILE`, and any other overrides.
+   - Find the project context with `rancher projects ls --cluster <cluster-id>` and copy the `local:p-xxxxx` value.
+3. Re-run `./rancher/bootstrap_vista3d.sh`. The script will pick up the defaults and fail fast if any required values are missing.
+
 ---
 
 ## One-Command Bootstrap

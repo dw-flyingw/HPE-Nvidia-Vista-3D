@@ -9,11 +9,26 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
-DEFAULT_NAMESPACE=${VISTA3D_NAMESPACE:-vista3d}
-DEFAULT_STORAGE_CLASS=${VISTA3D_STORAGE_CLASS:-local-path}
-DEFAULT_KUBECONFIG=${VISTA3D_KUBECONFIG_PATH:-$HOME/.kube/vista3d-rancher.yaml}
-DEFAULT_RENDER_OUTPUT=${VISTA3D_RENDER_OUTPUT:-$SCRIPT_DIR/vista3d.yaml}
-DEFAULT_LOCAL_PATH_MANIFEST="$SCRIPT_DIR/local-path-storage.yaml"
+DEFAULTS_FILE="$SCRIPT_DIR/bootstrap_defaults.env"
+if [[ -f "$DEFAULTS_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$DEFAULTS_FILE"
+fi
+
+DEFAULT_NAMESPACE=${DEFAULT_NAMESPACE:-${VISTA3D_NAMESPACE:-vista3d}}
+DEFAULT_STORAGE_CLASS=${DEFAULT_STORAGE_CLASS:-${VISTA3D_STORAGE_CLASS:-local-path}}
+DEFAULT_KUBECONFIG=${DEFAULT_KUBECONFIG:-${VISTA3D_KUBECONFIG_PATH:-$HOME/.kube/vista3d-rancher.yaml}}
+DEFAULT_RENDER_OUTPUT=${DEFAULT_RENDER_OUTPUT:-${VISTA3D_RENDER_OUTPUT:-$SCRIPT_DIR/vista3d.yaml}}
+DEFAULT_LOCAL_PATH_MANIFEST=${DEFAULT_LOCAL_PATH_MANIFEST:-"$SCRIPT_DIR/local-path-storage.yaml"}
+DEFAULT_RANCHER_URL=${DEFAULT_RANCHER_URL:-https://localhost:8443}
+DEFAULT_RANCHER_TOKEN=${DEFAULT_RANCHER_TOKEN:-}
+DEFAULT_RANCHER_CLUSTER=${DEFAULT_RANCHER_CLUSTER:-local}
+DEFAULT_RANCHER_CONTEXT=${DEFAULT_RANCHER_CONTEXT:-}
+DEFAULT_NGC_KEY_FILE=${DEFAULT_NGC_KEY_FILE:-/path/to/NGC_API_KEY}
+DEFAULT_KUBECTL_BIN=${DEFAULT_KUBECTL_BIN:-${DEFAULT_KUBECTL_PATH:-kubectl}}
+DEFAULT_INSTALL_STORAGE=${DEFAULT_INSTALL_STORAGE:-true}
+DEFAULT_NON_INTERACTIVE=${DEFAULT_NON_INTERACTIVE:-true}
+DEFAULT_SKIP_TLS_VERIFY=${DEFAULT_SKIP_TLS_VERIFY:-false}
 
 usage() {
   cat <<'EOF'
@@ -86,16 +101,37 @@ run_kubectl() {
   "${kubectl_cmd[@]}" "$@"
 }
 
-RANCHER_URL=${RANCHER_URL:-}
-RANCHER_TOKEN=${RANCHER_TOKEN:-}
-RANCHER_CLUSTER=${RANCHER_CLUSTER:-}
-RANCHER_CONTEXT=${RANCHER_CONTEXT:-}
-NGC_KEY_FILE=${NGC_API_KEY_FILE:-}
+bool_from_default() {
+  local value="${1,,}"
+  case "$value" in
+    true|yes|1) echo true ;;
+    *) echo false ;;
+  esac
+}
+
+require_value() {
+  local name="$1"
+  local value="$2"
+  local hint="$3"
+  if [[ -z "$value" ]]; then
+    if [[ -n "$hint" ]]; then
+      die "Missing required value for $name. $hint"
+    else
+      die "Missing required value for $name."
+    fi
+  fi
+}
+
+RANCHER_URL=${RANCHER_URL:-$DEFAULT_RANCHER_URL}
+RANCHER_TOKEN=${RANCHER_TOKEN:-$DEFAULT_RANCHER_TOKEN}
+RANCHER_CLUSTER=${RANCHER_CLUSTER:-$DEFAULT_RANCHER_CLUSTER}
+RANCHER_CONTEXT=${RANCHER_CONTEXT:-$DEFAULT_RANCHER_CONTEXT}
+NGC_KEY_FILE=${NGC_API_KEY_FILE:-$DEFAULT_NGC_KEY_FILE}
 NAMESPACE="$DEFAULT_NAMESPACE"
 KUBECONFIG_PATH="$DEFAULT_KUBECONFIG"
-KUBECTL_PATH=${KUBECTL_PATH:-kubectl}
+KUBECTL_PATH=${KUBECTL_PATH:-$DEFAULT_KUBECTL_BIN}
 STORAGE_CLASS="$DEFAULT_STORAGE_CLASS"
-INSTALL_STORAGE=false
+INSTALL_STORAGE=$(bool_from_default "$DEFAULT_INSTALL_STORAGE")
 LOCAL_PATH_MANIFEST=${LOCAL_PATH_MANIFEST:-$DEFAULT_LOCAL_PATH_MANIFEST}
 INGRESS_HOST=${VISTA3D_INGRESS_HOST:-}
 INGRESS_CLASS=${VISTA3D_INGRESS_CLASS:-nginx}
@@ -109,10 +145,10 @@ IMAGE_PULL_SECRET=${VISTA3D_IMAGE_PULL_SECRET:-}
 BACKEND_TAG=${VISTA3D_BACKEND_TAG:-}
 FRONTEND_TAG=${VISTA3D_FRONTEND_TAG:-}
 IMAGESERVER_TAG=${VISTA3D_IMAGE_SERVER_TAG:-}
-NON_INTERACTIVE=false
+NON_INTERACTIVE=$(bool_from_default "$DEFAULT_NON_INTERACTIVE")
 SKIP_HELM_DEPS=false
 DRY_RUN=false
-SKIP_TLS_VERIFY=false
+SKIP_TLS_VERIFY=$(bool_from_default "$DEFAULT_SKIP_TLS_VERIFY")
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -183,6 +219,11 @@ fi
 ensure_cmd bash
 ensure_cmd "$KUBECTL_PATH"
 
+require_value "RANCHER_URL" "$RANCHER_URL" "Set DEFAULT_RANCHER_URL in bootstrap_defaults.env or pass --rancher-url."
+require_value "RANCHER_TOKEN" "$RANCHER_TOKEN" "Set DEFAULT_RANCHER_TOKEN in bootstrap_defaults.env or pass --rancher-token."
+require_value "RANCHER_CLUSTER" "$RANCHER_CLUSTER" "Set DEFAULT_RANCHER_CLUSTER in bootstrap_defaults.env or pass --cluster."
+require_value "NGC_KEY_FILE" "$NGC_KEY_FILE" "Set DEFAULT_NGC_KEY_FILE in bootstrap_defaults.env or pass --ngc-key-file."
+
 setup_args=()
 [[ -n "$RANCHER_URL" ]] && setup_args+=(--rancher-url "$RANCHER_URL")
 [[ -n "$RANCHER_TOKEN" ]] && setup_args+=(--rancher-token "$RANCHER_TOKEN")
@@ -193,6 +234,10 @@ setup_args=()
 [[ -n "$NAMESPACE" ]] && setup_args+=(--namespace "$NAMESPACE")
 [[ -n "$KUBECONFIG_PATH" ]] && setup_args+=(--kubeconfig "$KUBECONFIG_PATH")
 [[ "$NON_INTERACTIVE" == true ]] && setup_args+=(--non-interactive)
+
+if [[ "$NON_INTERACTIVE" == true && -z "$RANCHER_CONTEXT" ]]; then
+  echo "Warning: DEFAULT_RANCHER_CONTEXT is empty. Rancher CLI may prompt for project selection." >&2
+fi
 
 echo ">> Running Rancher environment setup"
 "$SCRIPT_DIR/setup_rancher_env.sh" "${setup_args[@]}"

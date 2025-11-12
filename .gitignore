@@ -11,6 +11,7 @@ delme*
 ,genkit
 .gemini
 *.swp
+rancher/bootstrap_defaults.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
