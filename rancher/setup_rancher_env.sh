@@ -6,8 +6,13 @@ fi
 
 set -euo pipefail
 
+# Prefer RKE2-provided tooling when it exists but kubectl is missing from PATH.
+if [[ -x /var/lib/rancher/rke2/bin/kubectl ]] && ! command -v kubectl >/dev/null 2>&1; then
+  export PATH="/var/lib/rancher/rke2/bin:$PATH"
+fi
+
 DEFAULT_NAMESPACE=${VISTA3D_NAMESPACE:-vista3d}
-DEFAULT_STORAGE_CLASS=${VISTA3D_STORAGE_CLASS:-longhorn}
+DEFAULT_STORAGE_CLASS=${VISTA3D_STORAGE_CLASS:-local-path}
 DEFAULT_KUBECONFIG=${VISTA3D_KUBECONFIG_PATH:-$HOME/.kube/vista3d-rancher.yaml}
 
 usage() {
@@ -21,9 +26,10 @@ Options:
   --rancher-token TOKEN      Rancher API token (default: $RANCHER_TOKEN)
   --cluster NAME_OR_ID       Rancher cluster name or ID (default: $RANCHER_CLUSTER)
   --namespace NAME           Kubernetes namespace to manage (default: vista3d)
-  --storage-class NAME       Preferred storageClass for PVCs (default: longhorn)
+  --storage-class NAME       Preferred storageClass for PVCs (default: local-path)
   --ngc-key-file PATH        Path to file containing the NGC API key
   --kubeconfig PATH          Destination path for generated kubeconfig
+  --kubectl PATH             kubectl binary to use (default: auto-detect)
   --registry FQDN            Container registry host to create pull secret for
   --registry-username USER   Username for the registry pull secret
   --registry-password PASS   Password/token for the registry pull secret
@@ -136,11 +142,11 @@ decode_cluster_id() {
 
 ensure_namespace() {
   local ns="$1"
-  if kubectl get namespace "$ns" >/dev/null 2>&1; then
+  if kc get namespace "$ns" >/dev/null 2>&1; then
     echo "Namespace '$ns' already exists"
   else
     echo "Creating namespace '$ns'"
-    kubectl create namespace "$ns"
+    kc create namespace "$ns"
   fi
 }
 
@@ -151,14 +157,14 @@ create_ngc_secret() {
   [[ -f "$key_file" ]] || die "NGC key file '$key_file' not found"
 
   # Kubernetes secret expects key named ngc-api-key per Helm chart
-  if kubectl get secret vista3d-secrets -n "$ns" >/dev/null 2>&1; then
+  if kc get secret vista3d-secrets -n "$ns" >/dev/null 2>&1; then
     echo "Replacing existing secret 'vista3d-secrets' in namespace '$ns'"
   else
     echo "Creating secret 'vista3d-secrets' in namespace '$ns'"
   fi
 
-  kubectl delete secret vista3d-secrets -n "$ns" >/dev/null 2>&1 || true
-  kubectl create secret generic vista3d-secrets \
+  kc delete secret vista3d-secrets -n "$ns" >/dev/null 2>&1 || true
+  kc create secret generic vista3d-secrets \
     --from-file=ngc-api-key="$key_file" \
     -n "$ns"
 }
@@ -169,15 +175,15 @@ create_pull_secret() {
   local username="$3"
   local password="$4"
   local email="$5"
-  local name="${6:-regcred}"
+  local name="${6:-ngc-regcred}"
 
   if [[ -z "$registry" || -z "$username" || -z "$password" ]]; then
     die "Registry, username, and password are required to create an image pull secret"
   fi
 
-  if kubectl get secret "$name" -n "$ns" >/dev/null 2>&1; then
+  if kc get secret "$name" -n "$ns" >/dev/null 2>&1; then
     echo "Updating existing image pull secret '$name'"
-    kubectl delete secret "$name" -n "$ns" >/dev/null 2>&1 || true
+    kc delete secret "$name" -n "$ns" >/dev/null 2>&1 || true
   else
     echo "Creating image pull secret '$name'"
   fi
@@ -188,14 +194,14 @@ create_pull_secret() {
   fi
   args+=(-n "$ns")
 
-  kubectl create secret docker-registry "${args[@]}"
+  kc create secret docker-registry "${args[@]}"
 }
 
 NON_INTERACTIVE=false
 FORCE_LOGIN=false
 SKIP_SECRET=false
 SKIP_PULL_SECRET=false
-REGISTRY_NAME=regcred
+REGISTRY_NAME=ngc-regcred
 KUBECTL_CONTEXT=""
 RANCHER_CONTEXT=${RANCHER_CONTEXT:-}
 RANCHER_SKIP_VERIFY=false
@@ -207,6 +213,7 @@ NAMESPACE="$DEFAULT_NAMESPACE"
 STORAGE_CLASS="$DEFAULT_STORAGE_CLASS"
 NGC_KEY_FILE=${NGC_API_KEY_FILE:-}
 KUBECONFIG_PATH="$DEFAULT_KUBECONFIG"
+KUBECTL_BIN=${VISTA3D_KUBECTL_PATH:-}
 REGISTRY_HOST=${VISTA3D_REGISTRY_HOST:-}
 REGISTRY_USER=${VISTA3D_REGISTRY_USER:-}
 REGISTRY_PASS=${VISTA3D_REGISTRY_PASS:-}
@@ -228,6 +235,8 @@ while [[ $# -gt 0 ]]; do
       NGC_KEY_FILE="$2"; shift 2 ;;
     --kubeconfig)
       KUBECONFIG_PATH="$2"; shift 2 ;;
+    --kubectl)
+      KUBECTL_BIN="$2"; shift 2 ;;
     --registry)
       REGISTRY_HOST="$2"; shift 2 ;;
     --registry-username)
@@ -260,9 +269,30 @@ while [[ $# -gt 0 ]]; do
 done
 
 ensure_cmd rancher
-ensure_cmd kubectl
+
+if [[ -n "$KUBECTL_BIN" ]]; then
+  if [[ ! -x "$KUBECTL_BIN" && ! $(command -v "$KUBECTL_BIN" 2>/dev/null) ]]; then
+    die "kubectl not found at '$KUBECTL_BIN'"
+  fi
+else
+  if command -v kubectl >/dev/null 2>&1; then
+    KUBECTL_BIN=$(command -v kubectl)
+  elif [[ -x /var/lib/rancher/rke2/bin/kubectl ]]; then
+    KUBECTL_BIN=/var/lib/rancher/rke2/bin/kubectl
+    echo "kubectl not found in PATH; using $KUBECTL_BIN"
+  else
+    die "kubectl binary not found. Install kubectl or pass --kubectl /path/to/kubectl."
+  fi
+fi
+
+KUBECTL_DISPLAY=$(basename "$KUBECTL_BIN")
+
+kc() {
+  "$KUBECTL_BIN" "$@"
+}
+
+ensure_cmd "$KUBECTL_BIN"
 ensure_cmd helm
-ensure_cmd docker
 
 prompt_if_empty RANCHER_URL "Rancher server URL: "
 prompt_if_empty RANCHER_TOKEN "Rancher API token: " true
@@ -321,15 +351,15 @@ fi
 export KUBECONFIG="$KUBECONFIG_PATH"
 
 if [[ -n "$KUBECTL_CONTEXT" ]]; then
-  kubectl config use-context "$KUBECTL_CONTEXT"
+  kc config use-context "$KUBECTL_CONTEXT"
 fi
 
 ensure_namespace "$NAMESPACE"
 
 if [[ -n "$STORAGE_CLASS" ]]; then
   echo "Verifying storage class '$STORAGE_CLASS'"
-  if ! kubectl get storageclass "$STORAGE_CLASS" >/dev/null 2>&1; then
-    echo "Warning: storage class '$STORAGE_CLASS' not found. Update your Helm values accordingly." >&2
+  if ! kc get storageclass "$STORAGE_CLASS" >/dev/null 2>&1; then
+    echo "Warning: storage class '$STORAGE_CLASS' not found. If you intend to use local-path, run ./rancher/bootstrap_vista3d.sh --install-storage or apply ./rancher/local-path-storage.yaml." >&2
   fi
 fi
 
@@ -349,12 +379,12 @@ Setup complete.
 
 Next steps:
   1. Export KUBECONFIG: export KUBECONFIG="$KUBECONFIG_PATH"
-  2. Verify access: kubectl get nodes
+  2. Verify access: $KUBECTL_DISPLAY get nodes
   3. Update Helm values if needed (storageClass: $STORAGE_CLASS, namespace: $NAMESPACE)
   4. Render or deploy the Vista3D manifests using ./rancher/render_vista3d_manifest.sh or helm.
 
 GPU scheduling reminders:
-  - Ensure GPU nodes are labeled (e.g., kubectl label nodes <node> nvidia.com/gpu.present=true)
+  - Ensure GPU nodes are labeled (e.g., $KUBECTL_DISPLAY label nodes <node> nvidia.com/gpu.present=true)
   - Tolerations may require taints similar to nvidia.com/gpu=present:NoSchedule
 
 EOF

@@ -15,7 +15,7 @@ This document captures the end-to-end steps (and hard-earned lessons) for standi
 
 Optional but recommended:
 - TLS hostname and secret (or plan to port-forward the frontend).
-- Internet access for the script to fetch the local-path provisioner manifest (or replace with an internal mirror).
+- Ability to run `./rancher/diagnostics.sh` on the target host for quick health snapshots when debugging.
 
 ---
 
@@ -24,7 +24,7 @@ Optional but recommended:
 The new `rancher/bootstrap_vista3d.sh` script orchestrates the full workflow:
 
 1. Logs into Rancher, generates kubeconfig, namespace and secrets by calling `setup_rancher_env.sh`.
-2. Ensures a working storage class (installs the Rancher Local Path Provisioner when `--storage-class local-path`).
+2. Ensures a working storage class (installs or repairs the Rancher Local Path Provisioner using the bundled manifest when `--storage-class local-path`).
 3. Renders the Vista3D Helm chart into a consolidated YAML.
 4. Applies the manifest to your cluster.
 
@@ -42,6 +42,7 @@ cd /home/hpadmin/HPE-Nvidia-Vista-3D
   --ngc-key-file /home/hpadmin/NGC_API_KEY \
   --kubectl /var/lib/rancher/rke2/bin/kubectl \
   --storage-class local-path \
+  --install-storage \
   --render-output ./rancher/vista3d.yaml \
   --non-interactive
 ```
@@ -54,10 +55,11 @@ export KUBECONFIG=/home/hpadmin/.kube/vista3d-rancher.yaml
 /var/lib/rancher/rke2/bin/kubectl get pvc -n vista3d
 ```
 
-If you skip ingress, port-forward the frontend for quick access:
+If you skip ingress, port-forward the services for quick access:
 
 ```bash
 /var/lib/rancher/rke2/bin/kubectl -n vista3d port-forward svc/vista3d-frontend 8501:8501
+/var/lib/rancher/rke2/bin/kubectl -n vista3d port-forward svc/vista3d-image-server 8888:8888
 ```
 
 ---
@@ -81,13 +83,21 @@ See `./rancher/setup_rancher_env.sh --help` and `./rancher/render_vista3d_manife
 ## Storage Options
 
 - **Local Path Provisioner (recommended for single-node clusters)**  
-  The bootstrap script installs it automatically when using `--storage-class local-path`. This avoids the complexity of Longhorn (which requires `open-iscsi` and shared mount propagation).
+  The bootstrap script installs it automatically when using `--storage-class local-path`, relying on the bundled `./rancher/local-path-storage.yaml`. This avoids the complexity of Longhorn (which requires `open-iscsi` and shared mount propagation) and gives us a reproducible manifest even when the control plane is offline.
 
 - **Longhorn (advanced)**  
   If you prefer Longhorn, install it through Rancher Apps or Helm *before* running the bootstrap script, then invoke the script with `--storage-class longhorn --install-storage=false`. Ensure `/` is mounted with `rshared` propagation and `open-iscsi` is active on every node.
 
 - **Static hostPath PVs**  
   For one-off demos you can create static PVs and point the chart to them, but the bootstrap automation assumes a dynamic storage class.
+
+---
+
+## Diagnostics & Recovery
+
+- Capture cluster state quickly with `./rancher/diagnostics.sh > /tmp/vista3d-diag.log`. Share the log when asking for help; it includes RKE2 services, storage readiness, DNS, iptables, and Rancher reachability.
+- If `local-path-provisioner` crashes (e.g., `i/o timeout` fetching `local-path-config`), rerun `./rancher/bootstrap_vista3d.sh --install-storage` to reapply the bundled manifest and wait for readiness. You can also manually apply it with `kubectl apply -f ./rancher/local-path-storage.yaml`.
+- After repairing storage, verify PVC bindings before reapplying the Vista3D manifest: `kubectl get pvc -n vista3d`.
 
 ---
 

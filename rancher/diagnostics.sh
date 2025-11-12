@@ -60,11 +60,11 @@ else
   echo "[command not available: dig]" >&2
 fi
 
-run_cmd "iptables-save (head)" sudo iptables-save | head -n 40
-run_cmd "iptables-nft-save (head)" sudo iptables-nft-save | head -n 40
-run_cmd "nft list ruleset (head)" sudo nft list ruleset | head -n 80
+run_cmd "iptables-save (head)" bash -c "sudo iptables-save | head -n 40"
+run_cmd "iptables-nft-save (head)" bash -c "sudo iptables-nft-save | head -n 40"
+run_cmd "nft list ruleset (head)" bash -c "sudo nft list ruleset | head -n 80"
 
-run_cmd "listening ports 8501/8888" sudo ss -tulpn | grep -E ':(8501|8888)' || true
+run_cmd "listening ports 8501/8888" bash -c "sudo ss -tulpn | grep -E ':(8501|8888)' || true"
 run_cmd "Rancher ping" curl -k https://localhost:8443/ping
 
 run_cmd "local-path provisioner logs" "$RKE2_KUBECTL" --kubeconfig /etc/rancher/rke2/rke2.yaml -n local-path-storage logs deploy/local-path-provisioner

@@ -8,7 +8,7 @@ Prerequisites
 - A Rancher 2.7+ installation with a downstream cluster provisioned and available.
 - Cluster nodes with NVIDIA GPUs and the NVIDIA GPU Operator or equivalent GPU device plugin installed.
 - Persistent storage class capable of ReadWriteOnce for large volumes (e.g., Longhorn, EBS, or CSI-backed storage).
-- Optional: a private image registry credential stored as a Kubernetes secret (e.g., `regcred`).
+- Optional: a private image registry credential stored as a Kubernetes secret (e.g., `ngc-regcred`).
 
 Configuration
 -------------

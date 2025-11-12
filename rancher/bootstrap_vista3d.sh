@@ -13,6 +13,7 @@ DEFAULT_NAMESPACE=${VISTA3D_NAMESPACE:-vista3d}
 DEFAULT_STORAGE_CLASS=${VISTA3D_STORAGE_CLASS:-local-path}
 DEFAULT_KUBECONFIG=${VISTA3D_KUBECONFIG_PATH:-$HOME/.kube/vista3d-rancher.yaml}
 DEFAULT_RENDER_OUTPUT=${VISTA3D_RENDER_OUTPUT:-$SCRIPT_DIR/vista3d.yaml}
+DEFAULT_LOCAL_PATH_MANIFEST="$SCRIPT_DIR/local-path-storage.yaml"
 
 usage() {
   cat <<'EOF'
@@ -95,6 +96,7 @@ KUBECONFIG_PATH="$DEFAULT_KUBECONFIG"
 KUBECTL_PATH=${KUBECTL_PATH:-kubectl}
 STORAGE_CLASS="$DEFAULT_STORAGE_CLASS"
 INSTALL_STORAGE=false
+LOCAL_PATH_MANIFEST=${LOCAL_PATH_MANIFEST:-$DEFAULT_LOCAL_PATH_MANIFEST}
 INGRESS_HOST=${VISTA3D_INGRESS_HOST:-}
 INGRESS_CLASS=${VISTA3D_INGRESS_CLASS:-nginx}
 INGRESS_TLS_SECRET=${VISTA3D_INGRESS_TLS_SECRET:-}
@@ -173,6 +175,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$KUBECTL_PATH" == "kubectl" ]] && ! command -v kubectl >/dev/null 2>&1 && [[ -x /var/lib/rancher/rke2/bin/kubectl ]]; then
+  echo "kubectl binary not found in PATH; using /var/lib/rancher/rke2/bin/kubectl"
+  KUBECTL_PATH=/var/lib/rancher/rke2/bin/kubectl
+fi
+
 ensure_cmd bash
 ensure_cmd "$KUBECTL_PATH"
 
@@ -193,31 +200,66 @@ echo ">> Running Rancher environment setup"
 export KUBECONFIG="$KUBECONFIG_PATH"
 kubectl_cmd=("$KUBECTL_PATH" --kubeconfig "$KUBECONFIG")
 
-ensure_storage_class() {
-  if run_kubectl get storageclass "$STORAGE_CLASS" >/dev/null 2>&1; then
-    if [[ "$INSTALL_STORAGE" == true ]]; then
-      echo "StorageClass '$STORAGE_CLASS' already exists but --install-storage requested; reinstalling."
-    else
-      echo "StorageClass '$STORAGE_CLASS' already present."
-      return
-    fi
+local_path_manifest_available() {
+  [[ -f "$LOCAL_PATH_MANIFEST" ]]
+}
+
+apply_local_path_provisioner() {
+  if ! local_path_manifest_available; then
+    die "Local Path manifest '$LOCAL_PATH_MANIFEST' not found. Set LOCAL_PATH_MANIFEST or add the bundled file."
   fi
+  echo "Applying local-path provisioner manifest from $LOCAL_PATH_MANIFEST"
+  run_kubectl apply -f "$LOCAL_PATH_MANIFEST"
+  echo "Waiting for local-path namespace to settle..."
+  run_kubectl wait --for=condition=Established --timeout=60s crd/storageclasses.storage.k8s.io >/dev/null 2>&1 || true
+  echo "Waiting for local-path-provisioner deployment to become ready..."
+  run_kubectl rollout status deployment/local-path-provisioner -n local-path-storage --timeout=180s
+}
+
+is_local_path_ready() {
+  local available
+  available=$(run_kubectl get deployment/local-path-provisioner -n local-path-storage -o jsonpath='{.status.availableReplicas}' 2>/dev/null || echo "")
+  [[ "$available" =~ ^[1-9] ]]
+}
+
+configmap_present() {
+  run_kubectl -n local-path-storage get configmap/local-path-config >/dev/null 2>&1
+}
+
+ensure_storage_class() {
+  local reinstall_reason=""
 
   if [[ "$STORAGE_CLASS" != "local-path" ]]; then
     if [[ "$INSTALL_STORAGE" == true ]]; then
       die "Automatic install only implemented for 'local-path'. Please provision '$STORAGE_CLASS' manually."
-    else
-      echo "StorageClass '$STORAGE_CLASS' not found. Install it or re-run with --install-storage once available." >&2
-      exit 1
     fi
+    if ! run_kubectl get storageclass "$STORAGE_CLASS" >/dev/null 2>&1; then
+      die "StorageClass '$STORAGE_CLASS' not found. Install it or re-run with --storage-class local-path."
+    fi
+    echo "StorageClass '$STORAGE_CLASS' detected (custom provisioning assumed)."
+    return
   fi
 
-  echo "Installing local-path provisioner (StorageClass '$STORAGE_CLASS')."
-  if ! run_kubectl apply -f "https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.27/deploy/local-path-storage.yaml"; then
-    die "Failed to install local-path provisioner."
+  if run_kubectl get storageclass local-path >/dev/null 2>&1; then
+    if [[ "$INSTALL_STORAGE" == true ]]; then
+      reinstall_reason="--install-storage requested"
+    elif ! is_local_path_ready; then
+      reinstall_reason="deployment not ready"
+    elif ! configmap_present; then
+      reinstall_reason="ConfigMap local-path-config missing"
+    fi
+
+    if [[ -z "$reinstall_reason" ]]; then
+      echo "Local-path StorageClass present and provisioner healthy."
+      return
+    fi
+
+    echo "Reinstalling local-path provisioner ($reinstall_reason)."
+  else
+    echo "Local-path StorageClass not found; installing bundled manifest."
   fi
-  echo "Waiting for local-path-provisioner deployment to become ready..."
-  run_kubectl rollout status deployment/local-path-provisioner -n local-path-storage --timeout=120s
+
+  apply_local_path_provisioner
 }
 
 ensure_storage_class
@@ -264,7 +306,9 @@ Vista3D deployment initiated.
 Next steps:
   - Monitor pods: $KUBECTL_PATH --kubeconfig "$KUBECONFIG" get pods -n "$NAMESPACE"
   - Verify PVC binding: $KUBECTL_PATH --kubeconfig "$KUBECONFIG" get pvc -n "$NAMESPACE"
-  - If ingress disabled, port-forward frontend: $KUBECTL_PATH --kubeconfig "$KUBECONFIG" -n "$NAMESPACE" port-forward svc/vista3d-frontend 8501:8501
+  - Port-forward services (if ingress disabled):
+      $KUBECTL_PATH --kubeconfig "$KUBECONFIG" -n "$NAMESPACE" port-forward svc/vista3d-frontend 8501:8501
+      $KUBECTL_PATH --kubeconfig "$KUBECONFIG" -n "$NAMESPACE" port-forward svc/vista3d-image-server 8888:8888
 
 EOF
 

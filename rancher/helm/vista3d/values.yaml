@@ -4,7 +4,7 @@
 
 global:
   imageRegistry: ""  # Optional: set to "<registry>/" to prefix all images
-  imagePullSecrets: []  # e.g. [{ name: regcred }]
+  imagePullSecrets: []  # e.g. [{ name: ngc-regcred }]
 
 # Backend configuration (NVIDIA NIM Vista3D)
 backend:

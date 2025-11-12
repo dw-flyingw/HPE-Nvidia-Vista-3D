@@ -23,7 +23,7 @@ Options:
   --values FILE            Additional Helm values file (repeatable)
   --set key=val            Additional Helm --set override (repeatable)
   --set-string key=val     Additional Helm --set-string override (repeatable)
-  --storage-class NAME     Override persistence.storageClass (default: longhorn)
+  --storage-class NAME     Override persistence.storageClass (default: local-path)
   --output PATH            Output YAML path (default: ./rancher/vista3d-generated.yaml)
   --ingress-host HOST      Hostname for ingress (enables ingress when set)
   --ingress-class CLASS    Ingress class name (default: nginx)
@@ -106,7 +106,7 @@ DRY_RUN=false
 
 RELEASE_NAME=${VISTA3D_RELEASE:-vista3d}
 NAMESPACE=${VISTA3D_NAMESPACE:-vista3d}
-STORAGE_CLASS=${VISTA3D_STORAGE_CLASS:-longhorn}
+STORAGE_CLASS=${VISTA3D_STORAGE_CLASS:-local-path}
 OUTPUT_PATH="$DEFAULT_OUTPUT_PATH"
 INGRESS_HOST=${VISTA3D_INGRESS_HOST:-}
 INGRESS_CLASS=${VISTA3D_INGRESS_CLASS:-nginx}

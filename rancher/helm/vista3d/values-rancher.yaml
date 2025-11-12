@@ -1,7 +1,7 @@
 global:
   imageRegistry: ""        # Optional global prefix, e.g. "registry.myco.local/library/"
   imagePullSecrets:
-    - name: regcred        # Pre-create in Rancher cluster if pulling from a private registry
+    - name: ngc-regcred    # Created by setup_rancher_env.sh or manually for nvcr.io pulls
 
 backend:
   image:
@@ -47,7 +47,7 @@ imageServer:
       memory: "2Gi"
 
 persistence:
-  storageClass: longhorn
+  storageClass: local-path
   output:
     size: 200Gi
   dicom:
