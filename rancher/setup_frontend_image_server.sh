@@ -2,7 +2,7 @@
 
 # shellcheck disable=SC1090
 
-if [[ -z "${BASH_VERSION:-}" ]]; then
+if [ -z "${BASH_VERSION:-}" ]; then
   exec /usr/bin/env bash "$0" "$@"
 fi
 
