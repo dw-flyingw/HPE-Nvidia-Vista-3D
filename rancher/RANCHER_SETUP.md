@@ -45,7 +45,7 @@ cd /home/hpadmin/HPE-Nvidia-Vista-3D
   --rancher-url https://localhost:8443 \
   --skip-tls-verify \
   --rancher-token token-xxxxx:yyyyy \
-  --rancher-context local:p-abc12 \
+  --rancher-context local:p-abc12 \ # use a project-scoped context, not just "local"
   --kubectl /var/lib/rancher/rke2/bin/kubectl \
   --install-storage \
   --non-interactive

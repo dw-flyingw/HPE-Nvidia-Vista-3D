@@ -53,3 +53,10 @@
   ```bash
   ./rancher/diagnostics.sh | tee /tmp/vista3d-diag.log
   ```
+
+./rancher/setup_frontend_image_server.sh \
+  --rancher-token token-token-wwsk6:f7kxc7kw892h4fpjg8vjpc7rv42fb6c2rh46tbw4jjsmml5cw8jwkr \
+  --rancher-context local:p-abc12 \
+  --skip-tls-verify
+
+token-8vbhb:cdf5qztkjxv92wswhhvv57f292x5rngljmknj9fkqcbcnkpnwzv5wr

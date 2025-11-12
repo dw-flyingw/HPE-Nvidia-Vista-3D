@@ -161,6 +161,10 @@ fi
 [[ -n "$RANCHER_URL" ]] || die "Missing --rancher-url (or DEFAULT_RANCHER_URL)"
 [[ -n "$RANCHER_TOKEN" ]] || die "Missing --rancher-token (or DEFAULT_RANCHER_TOKEN)"
 [[ -n "$RANCHER_CONTEXT" ]] || die "Missing --rancher-context (or DEFAULT_RANCHER_CONTEXT)"
+if [[ "$RANCHER_CONTEXT" != *:* ]]; then
+  die "Rancher context '$RANCHER_CONTEXT' must include the project segment (e.g. local:p-abc12). \
+Use 'rancher projects ls --cluster $CLUSTER_ID' to find the correct value."
+fi
 
 ensure_cmd rancher
 ensure_cmd "$KUBECTL_BIN"
