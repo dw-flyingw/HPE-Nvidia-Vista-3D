@@ -10,7 +10,7 @@ This document captures the end-to-end steps (and hard-earned lessons) for standi
 - **kubectl** that targets your Rancher cluster (for single-node RKE2 the binary is usually `/var/lib/rancher/rke2/bin/kubectl`). If your shell aliases `kubectl` to `microk8s`, point the scripts at the real binary with `--kubectl`.
 - **Rancher API token** with cluster admin privileges (`token-xxxx:yyyyy`).
 - **Project context ID** (e.g. `local:p-abc12`). Obtain with `rancher projects ls`.
-- **NGC API key** saved to a local file for the backend secret.
+- **NGC API key** saved to a local file for the backend secret (optional if deploying frontend/image server only).
 - **Bash, Helm, kubectl** installed on the host where you run the scripts.
 
 Optional but recommended:
@@ -25,7 +25,8 @@ To run `bootstrap_vista3d.sh` without passing flags every time:
    ```bash
    cp ./rancher/bootstrap_defaults.env.example ./rancher/bootstrap_defaults.env
    ```
-2. Populate `DEFAULT_RANCHER_TOKEN`, `DEFAULT_RANCHER_CONTEXT`, `DEFAULT_NGC_KEY_FILE`, and any other overrides.
+2. Populate `DEFAULT_RANCHER_TOKEN`, `DEFAULT_RANCHER_CONTEXT`, and any other overrides.
+   - If you are deploying the backend, set `DEFAULT_NGC_KEY_FILE` so the bootstrap script can create the secret automatically. Leave it blank to skip secret creation.
    - Find the project context with `rancher projects ls --cluster <cluster-id>` and copy the `local:p-xxxxx` value.
 3. Re-run `./rancher/bootstrap_vista3d.sh`. The script will pick up the defaults and fail fast if any required values are missing.
 

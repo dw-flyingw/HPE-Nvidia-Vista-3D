@@ -19,13 +19,13 @@
     --rancher-token token-wwsk6:f7kxc7kw892h4fpjg8vjpc7rv42fb6c2rh46tbw4jjsmml5cw8jwkr \
     --cluster local \
     --rancher-context <PROJECT_CONTEXT> \
-    --ngc-key-file /path/to/NGC_API_KEY \
     --kubectl /var/lib/rancher/rke2/bin/kubectl \
     --storage-class local-path \
     --install-storage \
     --render-output ./rancher/vista3d.yaml \
     --non-interactive
   ```
+- If you later add the backend, append `--ngc-key-file /path/to/NGC_API_KEY` (or set `DEFAULT_NGC_KEY_FILE` in the defaults file) so the secret is created automatically.
 - Create the NGC registry secret if the backend image pulls from `nvcr.io`:
   ```bash
   /var/lib/rancher/rke2/bin/kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml \
@@ -53,23 +53,3 @@
   ```bash
   ./rancher/diagnostics.sh | tee /tmp/vista3d-diag.log
   ```
-
-# restart
-docker stop rancher
-docker rm rancher
-docker run -d --restart=unless-stopped --name rancher -p 8080:80 -p 8443:443 --privileged rancher/rancher:latest
-
-
-token-wwsk6:f7kxc7kw892h4fpjg8vjpc7rv42fb6c2rh46tbw4jjsmml5cw8jwkr
-
-   ./rancher/bootstrap_vista3d.sh \
-     --rancher-url https://localhost:8443 \
-     --rancher-token token-wwsk6:f7kxc7kw892h4fpjg8vjpc7rv42fb6c2rh46tbw4jjsmml5cw8jwkr \
-     --cluster local \
-     --rancher-context <project-context> \
-     --ngc-key-file /home/hpadmin/NGC_API_KEY \
-     --kubectl /var/lib/rancher/rke2/bin/kubectl \
-     --storage-class local-path \
-     --install-storage \
-     --render-output ./rancher/vista3d.yaml \
-     --non-interactive

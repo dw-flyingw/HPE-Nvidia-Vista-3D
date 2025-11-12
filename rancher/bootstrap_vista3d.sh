@@ -222,13 +222,17 @@ ensure_cmd "$KUBECTL_PATH"
 require_value "RANCHER_URL" "$RANCHER_URL" "Set DEFAULT_RANCHER_URL in bootstrap_defaults.env or pass --rancher-url."
 require_value "RANCHER_TOKEN" "$RANCHER_TOKEN" "Set DEFAULT_RANCHER_TOKEN in bootstrap_defaults.env or pass --rancher-token."
 require_value "RANCHER_CLUSTER" "$RANCHER_CLUSTER" "Set DEFAULT_RANCHER_CLUSTER in bootstrap_defaults.env or pass --cluster."
-require_value "NGC_KEY_FILE" "$NGC_KEY_FILE" "Set DEFAULT_NGC_KEY_FILE in bootstrap_defaults.env or pass --ngc-key-file."
 
 setup_args=()
 [[ -n "$RANCHER_URL" ]] && setup_args+=(--rancher-url "$RANCHER_URL")
 [[ -n "$RANCHER_TOKEN" ]] && setup_args+=(--rancher-token "$RANCHER_TOKEN")
 [[ -n "$RANCHER_CLUSTER" ]] && setup_args+=(--cluster "$RANCHER_CLUSTER")
-[[ -n "$NGC_KEY_FILE" ]] && setup_args+=(--ngc-key-file "$NGC_KEY_FILE")
+if [[ -n "$NGC_KEY_FILE" ]]; then
+  setup_args+=(--ngc-key-file "$NGC_KEY_FILE")
+else
+  echo "Warning: No NGC key file provided; skipping backend secret creation." >&2
+  setup_args+=(--skip-secret)
+fi
 [[ -n "$RANCHER_CONTEXT" ]] && setup_args+=(--rancher-context "$RANCHER_CONTEXT")
 [[ "$SKIP_TLS_VERIFY" == true ]] && setup_args+=(--skip-tls-verify)
 [[ -n "$NAMESPACE" ]] && setup_args+=(--namespace "$NAMESPACE")
