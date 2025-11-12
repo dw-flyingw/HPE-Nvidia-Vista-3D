@@ -11,7 +11,9 @@ ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_THEME_BASE=dark
 
 # System deps for plotly, medical imaging, and 3D processing
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get clean && \
+    apt-get update --fix-missing && \
+    apt-get install -y --no-install-recommends \
     curl \
     dcm2niix \
     libgomp1 \
@@ -46,6 +48,9 @@ COPY utils/ ./utils/
 COPY assets/ ./assets/
 COPY conf/ ./conf/
 COPY app.py ./app.py
+COPY Image_Data.py ./
+COPY NiiVue_Viewer.py ./
+COPY Tools.py ./
 CMD ["/usr/local/bin/streamlit", "run", "/app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 

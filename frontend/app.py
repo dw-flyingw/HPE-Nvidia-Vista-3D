@@ -14,6 +14,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import extra_streamlit_components as stx
 
+
+# Add the application root to the Python path to ensure modules are found.
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
