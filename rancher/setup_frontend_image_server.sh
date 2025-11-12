@@ -22,7 +22,7 @@ Provision the Vista3D frontend and image server on a Rancher-managed "local"
 cluster, ensuring local-path storage is available.
 
 Options:
-  --rancher-url URL         Rancher server URL (required)
+  --rancher-url URL         Rancher server URL (default: https://localhost:8443)
   --rancher-token TOKEN     Rancher API token (required)
   --rancher-context ID      Rancher project context (e.g. local:p-abc12)
   --cluster ID              Rancher cluster ID (default: local)
@@ -93,10 +93,10 @@ source_defaults() {
 
 source_defaults
 
-RANCHER_URL=${DEFAULT_RANCHER_URL:-${RANCHER_URL:-}}
+RANCHER_URL=${RANCHER_URL:-${DEFAULT_RANCHER_URL:-https://localhost:8443}}
 RANCHER_TOKEN=${DEFAULT_RANCHER_TOKEN:-${RANCHER_TOKEN:-}}
 RANCHER_CONTEXT=${DEFAULT_RANCHER_CONTEXT:-${RANCHER_CONTEXT:-}}
-CLUSTER_ID=${DEFAULT_CLUSTER_ID:-${CLUSTER_ID:-local}}
+CLUSTER_ID=${CLUSTER_ID:-${DEFAULT_CLUSTER_ID:-local}}
 NAMESPACE=${DEFAULT_NAMESPACE:-${NAMESPACE:-vista3d}}
 KUBECONFIG_PATH=${DEFAULT_KUBECONFIG_PATH:-${KUBECONFIG_PATH:-$HOME/.kube/vista3d-rancher.yaml}}
 KUBECTL_BIN=${DEFAULT_KUBECTL_BIN:-${KUBECTL_BIN:-kubectl}}

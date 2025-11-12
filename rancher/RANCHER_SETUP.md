@@ -34,6 +34,33 @@ To run `bootstrap_vista3d.sh` without passing flags every time:
 
 ## One-Command Bootstrap
 
+### Frontend + Image Server Only
+
+Use `./rancher/setup_frontend_image_server.sh` when you only need the web UI and image server (no GPU backend). The script wraps Rancher login, kubeconfig retrieval, storage provisioning, manifest rendering, and apply into a single command.
+
+```bash
+cd /home/hpadmin/HPE-Nvidia-Vista-3D
+
+./rancher/setup_frontend_image_server.sh \
+  --rancher-url https://localhost:8443 \
+  --skip-tls-verify \
+  --rancher-token token-xxxxx:yyyyy \
+  --rancher-context local:p-abc12 \
+  --kubectl /var/lib/rancher/rke2/bin/kubectl \
+  --install-storage \
+  --non-interactive
+```
+
+Defaults:
+- Rancher URL defaults to `https://localhost:8443`
+- Cluster ID defaults to `local`
+- Namespace defaults to `vista3d`
+- Rendered manifest path defaults to `./rancher/vista3d-frontend-image.yaml`
+
+Override any of these with flags or by populating `./rancher/bootstrap_defaults.env` keys (e.g., `DEFAULT_RANCHER_TOKEN`).
+
+---
+
 The new `rancher/bootstrap_vista3d.sh` script orchestrates the full workflow:
 
 1. Logs into Rancher, generates kubeconfig, namespace and secrets by calling `setup_rancher_env.sh`.
