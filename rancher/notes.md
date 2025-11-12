@@ -133,3 +133,5 @@ kubectl get storageclass
 
 kubectl --kubeconfig /home/hpadmin/.kube/vista3d-rancher.yaml \
   -n vista3d port-forward svc/vista3d-frontend 8501:8501
+
+export KUBECONFIG=/home/hpadmin/.kube/vista3d-rancher.yaml
