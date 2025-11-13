@@ -217,10 +217,10 @@ def render_sidebar():
         st.session_state.show_scan = show_scan
         viewer_config._settings['show_scan'] = show_scan
         
-        # Show Voxels checkbox - only if voxels are available
+        # Show Segments checkbox - only if voxels are available
         if has_voxels:
             show_voxels = st.checkbox(
-                "Show Voxels",
+                "Show Segments",
                 value=viewer_config._settings.get('show_overlay', False),
                 help="Toggle visibility of anatomical structure overlays"
             )
@@ -343,7 +343,7 @@ def render_viewer(selected_patient: str, selected_file: str):
                 volume_list_entries.append({"url": overlay['url']})
         print(f"DEBUG: Added {len(overlays)} overlays to volume list")
     elif not show_overlay:
-        print(f"DEBUG: Show Voxels checkbox is NOT checked - voxels will not be displayed")
+        print(f"DEBUG: Show Segments checkbox is NOT checked - voxels will not be displayed")
     elif not overlays:
         print(f"DEBUG: No overlays were created")
 

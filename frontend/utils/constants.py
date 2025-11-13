@@ -383,7 +383,7 @@ VIEWER_HEIGHT = 1000
 # UI messages
 MESSAGES = {
     'no_voxels_available': "No voxels available for this patient/file.",
-    'no_nifti_or_voxels': "Nothing to display. Enable 'Show Scan' or 'Show Voxels' with selected structures.",
+    'no_nifti_or_voxels': "Nothing to display. Enable 'Show Scan' or 'Show Segments' with selected structures.",
     'select_patient_file': "Select a patient and file to begin.",
 }
 
