@@ -1,0 +1,45 @@
+{{- if .Values.fileserver.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vista3d.fullname" . }}-fileserver
+  labels:
+    app: vista3d-image-server
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vista3d-image-server
+  template:
+    metadata:
+      labels:
+        app: vista3d-image-server
+      annotations:
+        {{- toYaml .Values.fileserver.annotations | nindent 8 }}
+    spec:
+      containers:
+        - name: fileserver
+          image: {{ .Values.fileserver.image }}
+          env:
+            - name: PORT
+              value: "{{ .Values.fileserver.port }}"
+            - name: FOLDER
+              value: "/app"
+            - name: CORS
+              value: "true"
+          ports:
+            - containerPort: {{ .Values.fileserver.port }}
+          volumeMounts:
+            - name: output-data-volume
+              mountPath: /app/output
+            - name: dicom-data-volume
+              mountPath: /app/dicom
+      volumes:
+        - name: output-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.output.pvcName }}
+        - name: dicom-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.dicom.pvcName }}
+{{- end }}

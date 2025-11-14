@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.storage.output.pvcName }}
+  labels:
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.storage.output.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.output.size }}

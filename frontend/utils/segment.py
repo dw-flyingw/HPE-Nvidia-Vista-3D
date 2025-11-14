@@ -37,15 +37,15 @@ VISTA3D_INFERENCE_URL = f"{VISTA3D_SERVER.rstrip('/')}/v1/vista3d/inference"
 # When Vista3D is in Docker and image server is on host, use host.docker.internal
 # When both are local, use localhost
 # Check if we're running in Docker by looking for container environment
-if os.getenv('DOCKER_CONTAINER') == 'true' or os.path.exists('/.dockerenv'):
-    # We're in Docker, but Vista3D server needs to access host machine
-    # Use environment variable or fallback to host.docker.internal
-    DEFAULT_IMAGE_SERVER_URL = os.getenv('VISTA3D_IMAGE_SERVER_URL', 'http://host.docker.internal:8888')
-else:
-    # We're running locally, both servers are local - use localhost
-    DEFAULT_IMAGE_SERVER_URL = os.getenv('VISTA3D_IMAGE_SERVER_URL', 'http://localhost:8888')
+# if os.getenv('DOCKER_CONTAINER') == 'true' or os.path.exists('/.dockerenv'):
+#     # We're in Docker, but Vista3D server needs to access host machine
+#     # Use environment variable or fallback to host.docker.internal
+#     DEFAULT_IMAGE_SERVER_URL = os.getenv('VISTA3D_IMAGE_SERVER_URL', 'http://host.docker.internal:8888')
+# else:
+#     # We're running locally, both servers are local - use localhost
+#     DEFAULT_IMAGE_SERVER_URL = os.getenv('VISTA3D_IMAGE_SERVER_URL', 'http://localhost:8888')
 
-VISTA3D_IMAGE_SERVER_URL = os.getenv('VISTA3D_IMAGE_SERVER_URL', DEFAULT_IMAGE_SERVER_URL)
+VISTA3D_IMAGE_SERVER_URL = os.getenv('VISTA3D_IMAGE_SERVER_URL', VISTA3D_INFERENCE_URL)
 # Use full paths from .env - no more PROJECT_ROOT needed
 OUTPUT_FOLDER = os.getenv('OUTPUT_FOLDER')
 if not OUTPUT_FOLDER:
@@ -263,15 +263,23 @@ def main():
                 # Build URL using Vista3D-accessible image server configuration
                 # Vista3D server needs the full path including /output/ prefix
                 vista3d_input_url = f"{VISTA3D_IMAGE_SERVER_URL.rstrip('/')}/output/{relative_path_to_nifti}"
-                
+                # Read API Key from environment
+                api_key = os.getenv('VISTA3D_API_KEY')
+
+                    
                 payload = {"image": vista3d_input_url, "prompts": {"labels": target_vessels}}
                 headers = {"Content-Type": "application/json"}
-
+                # Update headers to include the Authorization token if the key exists
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
                 print(f"\n  Processing: {nifti_file_path.name}")
                 print(f"    Vista3D Server: {VISTA3D_SERVER}")
                 print(f"    Image URL (Vista3D-accessible): {vista3d_input_url}")
                 print(f"    Target vessels: {target_vessels}")
-                
+                if api_key:
+                    print("    Using API Key for authentication.")
+
+
                 inference_response = requests.post(VISTA3D_INFERENCE_URL, json=payload, headers=headers, verify=False)
                 
                 # Add detailed error information
