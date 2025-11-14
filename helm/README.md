@@ -8,3 +8,10 @@
 * When you are updating the values.yaml stage, update the following environment variables:
     * `VISTA3D_SERVER`
     * `VISTA3D_API_KEY`
+
+
+# MLIS
+* this is needed
+
+DOMAIN_WHITELIST =  [".*","http://.*","https://.*","http://.*:.*","https://.*:.*","file:///.*","*"]
+ 
