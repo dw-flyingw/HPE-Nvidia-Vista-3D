@@ -1,0 +1,57 @@
+{{- if .Values.sampleDataJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "vista3d.fullname" . }}-sample-data
+  labels:
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: data-installer
+          image: {{ .Values.sampleDataJob.image }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Starting sample data installation..."
+              apk add --no-cache curl tar
+              echo "Downloading sample data..."
+              curl -L -o /tmp/sample_data.tgz "{{ .Values.sampleDataJob.dataUrl }}"
+              echo "Extracting sample data..."
+              mkdir -p /tmp/sample
+              tar -xzf /tmp/sample_data.tgz -C /tmp/sample
+              echo "Installing DICOM files..."
+              if [ -d "/tmp/sample/dicom" ]; then
+                cp -r /tmp/sample/dicom/* /app/dicom/ || true
+                echo "DICOM files installed successfully."
+              else
+                echo "Warning: No 'dicom' directory found in extracted data."
+              fi
+              echo "Installing output files..."
+              if [ -d "/tmp/sample/output" ]; then
+                cp -r /tmp/sample/output/* /app/output/ || true
+                echo "Output files installed successfully."
+              else
+                echo "Warning: No 'output' directory found in extracted data."
+              fi
+              echo "Cleaning up temporary files..."
+              rm -rf /tmp/sample /tmp/sample_data.tgz
+              echo "Sample data installation completed successfully!"
+          volumeMounts:
+            - name: dicom-data-volume
+              mountPath: /app/dicom
+            - name: output-data-volume
+              mountPath: /app/output
+      volumes:
+        - name: dicom-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.dicom.pvcName }}
+        - name: output-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.output.pvcName }}
+  backoffLimit: {{ .Values.sampleDataJob.backoffLimit }}
+{{- end }}

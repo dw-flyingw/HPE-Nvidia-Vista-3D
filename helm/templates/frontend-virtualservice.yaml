@@ -1,0 +1,24 @@
+{{- if .Values.ezua.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "vista3d.fullname" . }}-frontend
+  labels:
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.ezua.virtualService.endpoint | quote }}
+  gateways:
+    - {{ .Values.ezua.virtualService.istioGateway }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: {{ include "vista3d.fullname" . }}-frontend.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.frontend.port }}
+{{- end }}

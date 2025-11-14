@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "vista3d.fullname" . }}-frontend
+  labels:
+    app: vista3d-frontend
+    {{- include "vista3d.labels" . | nindent 4 }}
+spec:
+  containers:
+    - name: vista3d-frontend
+      image: {{ .Values.frontend.image }}
+      imagePullPolicy: {{ .Values.frontend.imagePullPolicy }}
+      ports:
+        - containerPort: {{ .Values.frontend.port }}
+      env:
+        - name: VISTA3D_SERVER
+          value: {{ .Values.frontend.env.VISTA3D_SERVER | quote }}
+        - name: IMAGE_SERVER
+          value: {{ .Values.frontend.env.IMAGE_SERVER | quote }}
+        - name: VISTA3D_IMAGE_SERVER_URL
+          value: {{ .Values.frontend.env.VISTA3D_IMAGE_SERVER_URL | quote }}
+        - name: EXTERNAL_IMAGE_SERVER
+          value: {{ .Values.frontend.env.EXTERNAL_IMAGE_SERVER | quote }}
+        - name: VISTA3D_API_KEY
+          value: {{ .Values.frontend.env.VISTA3D_API_KEY | quote }}   # not a Secret, per your requirement
+        - name: OUTPUT_FOLDER
+          value: {{ .Values.frontend.env.OUTPUT_FOLDER | quote }}
+        - name: DICOM_FOLDER
+          value: {{ .Values.frontend.env.DICOM_FOLDER | quote }}
+        - name: DOCKER_CONTAINER
+          value: {{ .Values.frontend.env.DOCKER_CONTAINER | quote }}
+        - name: STREAMLIT_SERVER_RUN_ON_SAVE
+          value: {{ .Values.frontend.env.STREAMLIT_SERVER_RUN_ON_SAVE | quote }}
+        - name: STREAMLIT_SERVER_FILE_WATCHER_TYPE
+          value: {{ .Values.frontend.env.STREAMLIT_SERVER_FILE_WATCHER_TYPE | quote }}
+      resources:
+        {{- toYaml .Values.frontend.resources | nindent 8 }}
+      volumeMounts:
+        - name: output-data
+          mountPath: /app/output
+        - name: dicom-data
+          mountPath: /app/dicom
+  volumes:
+    - name: output-data
+      persistentVolumeClaim:
+        claimName: {{ .Values.storage.output.pvcName }}
+    - name: dicom-data
+      persistentVolumeClaim:
+        claimName: {{ .Values.storage.dicom.pvcName }}

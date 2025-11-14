@@ -1,0 +1,63 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# Persistent volumes
+storage:
+  output:
+    size: 100Gi
+    accessModes: [ "ReadWriteMany" ]
+    pvcName: "vista3d-output-pvc"
+  dicom:
+    size: 50Gi
+    accessModes: [ "ReadWriteMany" ]
+    pvcName: "vista3d-dicom-pvc"
+
+# Fileserver (static file server with CORS)
+fileserver:
+  enabled: true
+  image: "halverneus/static-file-server:latest"
+  port: 8888
+  annotations:
+    sidecar.istio.io/inject: "false"
+  # Expose via Istio?
+  istio:
+    enabled: true
+    host: "fileserver.example.com" # set to your ingress host
+    gateway: "istio-system/ezaf-gateway"
+
+frontend:
+  image: "mendeza/vista3d-frontend:v1.0.8"
+  imagePullPolicy: Always
+  port: 8501
+  env:
+    VISTA3D_SERVER: "<REPLACE_ME>.${DOMAIN_NAME}"
+    IMAGE_SERVER: "https://vista3d-image-server.${DOMAIN_NAME}"
+    VISTA3D_IMAGE_SERVER_URL: "https://vista3d-image-server.${DOMAIN_NAME}"
+    EXTERNAL_IMAGE_SERVER: "https://vista3d-image-server.${DOMAIN_NAME}"
+    VISTA3D_API_KEY: ""   # <-- set this manually
+    OUTPUT_FOLDER: "/app/output"
+    DICOM_FOLDER: "/app/dicom"
+    DOCKER_CONTAINER: "true"
+    STREAMLIT_SERVER_RUN_ON_SAVE: "true"
+    STREAMLIT_SERVER_FILE_WATCHER_TYPE: "auto"
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+# Istio/PCAI configuration for external access (FRONTEND)
+ezua:
+  enabled: true
+  virtualService:
+    endpoint: "vista3d-frontend.${DOMAIN_NAME}"   # <-- set this to match your PCAI ingress
+    istioGateway: "istio-system/ezaf-gateway"
+
+# Sample data job
+sampleDataJob:
+  enabled: true
+  image: "alpine:latest"
+  backoffLimit: 2
+  dataUrl: "https://media.githubusercontent.com/media/dw-flyingw/HPE-Nvidia-Vista-3D/main/sample_data.tgz"

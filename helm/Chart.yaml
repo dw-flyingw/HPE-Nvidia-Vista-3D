@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vista3d
+description: Vista3D app (fileserver + frontend + sample-data job) with Istio exposure
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
