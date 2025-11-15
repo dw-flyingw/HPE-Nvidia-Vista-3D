@@ -11,7 +11,6 @@
 
 
 # MLIS
-* this is needed
-
+add this whitelist to Vista3D 
 DOMAIN_WHITELIST =  [".*","http://.*","https://.*","http://.*:.*","https://.*:.*","file:///.*","*"]
  

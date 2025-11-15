@@ -5,21 +5,33 @@ import os
 import requests
 
 def check_image_server_status():
-    """Check if the image server is available by requesting the root URL."""
+    """Check if the image server is available by requesting the health endpoint."""
     image_server_url = os.getenv("IMAGE_SERVER")
 
     if not image_server_url:
         return False
 
     try:
-        # CHANGED: The simple python http.server doesn't have a /health endpoint.
-        # We will check the root URL ('/') instead, which should return a 200 OK
-        # with a directory listing if the server is running.
-        response = requests.get(image_server_url.rstrip('/'), timeout=2)
-        # A 404 is also acceptable if the root directory is empty, but we'll stick to 200 for a positive check.
-        return response.status_code == 200
+        # Use the /health endpoint which the FastAPI server provides
+        health_url = f"{image_server_url.rstrip('/')}/health"
+        response = requests.get(health_url, timeout=5)
+        if response.status_code == 200:
+            return True
     except (requests.exceptions.RequestException, requests.exceptions.Timeout):
-        return False
+        pass
+    
+    # If localhost failed and we're in Docker, try the service name
+    # Check if we're likely in Docker (you can enhance this check)
+    if "localhost" in image_server_url or "127.0.0.1" in image_server_url:
+        try:
+            docker_url = image_server_url.replace("localhost", "image-server").replace("127.0.0.1", "image-server")
+            health_url = f"{docker_url.rstrip('/')}/health"
+            response = requests.get(health_url, timeout=5)
+            return response.status_code == 200
+        except (requests.exceptions.RequestException, requests.exceptions.Timeout):
+            pass
+    
+    return False
 
 def check_vista3d_server_status():
     """Check if the Vista3D server is available, now including the API key."""

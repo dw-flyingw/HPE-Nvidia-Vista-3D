@@ -339,7 +339,6 @@ def load_3d_render_config(config_name='3d_render_quality'):
         # Return default settings if config loading fails
         return {
             'antiAlias': True,
-            'smoothVoxels': True,
             'volumeRenderQuality': 'high',
             'volumeRenderSteps': 256,
             'lighting': True,
