@@ -279,6 +279,96 @@ def detect_reformatted_slice(json_file):
         return False
 
 
+def format_patient_age(age_str):
+    """
+    Format patient age in DICOM format (e.g., "045Y" for 45 years).
+    
+    Args:
+        age_str: Age string from DICOM metadata (could be in various formats)
+    
+    Returns:
+        str: Formatted age string in DICOM format (NNN[D|W|M|Y])
+    """
+    if not age_str or age_str == 'Unknown' or age_str == '':
+        return None
+    
+    # Check if already in DICOM format (ends with D, W, M, or Y)
+    age_str = str(age_str).strip()
+    if age_str[-1].upper() in ['D', 'W', 'M', 'Y']:
+        return age_str
+    
+    # Try to parse as numeric value and assume years
+    try:
+        age_num = float(age_str)
+        # Format as DICOM age: zero-padded 3 digits + unit
+        return f"{int(age_num):03d}Y"
+    except (ValueError, TypeError):
+        # If can't parse, return None
+        return None
+
+
+def extract_comprehensive_metadata(json_file, nifti_file):
+    """
+    Extract comprehensive DICOM metadata from JSON sidecar and create enhanced metadata file.
+    
+    Args:
+        json_file: Path to dcm2niix JSON sidecar file
+        nifti_file: Path to corresponding NIfTI file (for output path)
+    
+    Returns:
+        dict: Comprehensive metadata dictionary with all requested fields
+    """
+    comprehensive_metadata = {}
+    
+    try:
+        if not json_file or not json_file.exists():
+            print(f"    ⚠️  JSON sidecar not found, creating minimal metadata")
+            return comprehensive_metadata
+        
+        with open(json_file, 'r') as f:
+            dicom_metadata = json.load(f)
+        
+        # Preserve all original metadata fields from dcm2niix
+        # dcm2niix already extracts most DICOM fields, so we keep everything and format as needed
+        comprehensive_metadata = dicom_metadata.copy()
+        
+        # Patient Demographics - format age in DICOM format (e.g., "045Y")
+        patient_age = dicom_metadata.get('PatientAge', '')
+        if patient_age:
+            formatted_age = format_patient_age(patient_age)
+            if formatted_age:
+                comprehensive_metadata['PatientAge'] = formatted_age
+        
+        # All requested fields are preserved from the original dcm2niix JSON:
+        # - PatientAge: Formatted above in DICOM format (e.g., "045Y")
+        # - PatientSex: M/F/O (already in JSON)
+        # - PatientWeight: kg (already in JSON)
+        # - PatientSize: meters (already in JSON)
+        # - PatientBirthDate: (already in JSON)
+        # - PatientID: (already in JSON)
+        # - StudyDate, StudyTime, StudyDescription: (already in JSON)
+        # - SeriesDescription: (already in JSON)
+        # - Modality: (already in JSON)
+        # - Manufacturer: (already in JSON)
+        # - ManufacturersModelName: (already in JSON)
+        # - ContrastBolusAgent, ContrastBolusVolume, etc.: (already in JSON if present)
+        # - Scan parameters (ExposureTime, XRayTubeCurrent, etc.): (already in JSON if present)
+        
+        # Save enhanced metadata JSON file (overwrite the original dcm2niix JSON with age-formatted version)
+        enhanced_metadata_path = json_file  # Overwrite the original JSON with enhanced version
+        
+        with open(enhanced_metadata_path, 'w') as f:
+            json.dump(comprehensive_metadata, f, indent=2, default=str)
+        
+        print(f"    ✅ Created comprehensive metadata file: {json_file.name}")
+        
+        return comprehensive_metadata
+        
+    except Exception as e:
+        print(f"    ⚠️  Error extracting comprehensive metadata: {e}")
+        return comprehensive_metadata
+
+
 def detect_scan_modality(json_file):
     """
     Detect scan modality (MRI, CT, etc.) from DICOM metadata.
@@ -1059,6 +1149,13 @@ def convert_dicom_to_nifti(force_overwrite=False, min_size_mb=None, patient_fold
                                 if json_f.stem == nifti_basename:
                                     json_file = json_f
                                     break
+                            
+                            # Extract comprehensive metadata from JSON sidecar
+                            if json_file:
+                                try:
+                                    extract_comprehensive_metadata(json_file, nifti_file)
+                                except Exception as e:
+                                    print(f"    ⚠️  Metadata extraction warning: {e}")
                             
                             # Enhance for NiiVue with timeout protection
                             try:

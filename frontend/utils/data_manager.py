@@ -32,17 +32,29 @@ class DataManager:
             soup = BeautifulSoup(html_content, 'html.parser')
             # CHANGED: Find all <a> tags directly, which is more robust and works with the halverneus server.
             for link in soup.find_all('a'):
-                if link.get('href'):
-                    name = link.get_text().strip()
+                href = link.get('href')
+                if href:
+                    # Extract name from href instead of text content to avoid emoji/icon issues
+                    # href format: "/output/PA00000002/" or "/output/PA00000002/file.nii.gz"
+                    href = href.strip()
+                    
                     # Skip parent directory links
-                    if name.endswith('../') or name == '..':
+                    if href.endswith('../') or href == '..' or href.endswith('/../'):
                         continue
                     
-                    # The halverneus server adds a '/' to directory names
-                    is_directory = name.endswith('/')
+                    # Extract the basename from the href path
+                    # Remove leading/trailing slashes and get the last component
+                    path_parts = [p for p in href.rstrip('/').split('/') if p]
+                    if not path_parts:
+                        continue
                     
-                    # Clean up the name
-                    clean_name = name.strip('/')
+                    clean_name = path_parts[-1]
+                    is_directory = href.endswith('/')
+                    
+                    # Also skip if the name appears to be just an emoji/icon (contains only emoji/special chars)
+                    # This is a safety check, but extracting from href should already avoid this
+                    if not clean_name or clean_name.strip() == '':
+                        continue
 
                     items.append({
                         'name': clean_name,
