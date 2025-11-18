@@ -1,1 +1,0 @@
-dave@Air frontend % docker build . -t dwtwp/vista3d-frontend:0.0.1 --no-cache
