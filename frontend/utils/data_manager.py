@@ -118,9 +118,12 @@ class DataManager:
                 return set(), {}
             soup = BeautifulSoup(resp.text, 'html.parser')
             voxel_files = [link.get('href') for link in soup.find_all('a') if link.get('href') and link.get('href').endswith('.nii.gz')]
-            available_ids = {filename_to_id_mapping[f.split('/')[-1]] for f in voxel_files if f.split('/')[-1] in filename_to_id_mapping}
-            id_to_name = {label_id: fname.replace('.nii.gz', '').replace('_', ' ') for fname, label_id in filename_to_id_mapping.items() if label_id in available_ids}
-            return available_ids, id_to_name
+            # Extract just the filename from the href (handle both relative and absolute paths)
+            available_filenames = {f.split('/')[-1] for f in voxel_files if f.split('/')[-1] in filename_to_id_mapping}
+            available_ids = {filename_to_id_mapping[fname] for fname in available_filenames}
+            # Return mapping from label_id to filename (with .nii.gz extension) for use in URL construction
+            id_to_path_map = {label_id: fname for fname, label_id in filename_to_id_mapping.items() if label_id in available_ids}
+            return available_ids, id_to_path_map
         except Exception as e:
             print(f"Error fetching available voxel labels: {e}")
             return set(), {}
