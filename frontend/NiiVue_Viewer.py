@@ -252,10 +252,15 @@ def render_sidebar():
                             st.rerun()
                     
                     # Multiselect for voxel selection
+                    # Filter default values to only include those that exist in available options
+                    filtered_defaults = [
+                        v for v in st.session_state.voxel_multiselect_default 
+                        if v in available_voxel_names
+                    ]
                     selected_voxels = st.multiselect(
                         "Choose anatomical structures:",
                         available_voxel_names,
-                        default=st.session_state.voxel_multiselect_default,
+                        default=filtered_defaults,
                         label_visibility="collapsed"
                     )
                     
