@@ -12,17 +12,36 @@ import io
 import numpy as np
 import traceback
 import shutil
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 try:
     from utils.config_manager import ConfigManager
-    from utils.constants import MIN_FILE_SIZE_MB
+    from utils.constants import (
+        MIN_FILE_SIZE_MB,
+        ENABLE_SEGMENTATION_VALIDATION,
+        ENABLE_SEGMENTATION_CLEANUP,
+        MIN_VOXELS_PER_LABEL,
+        MIN_VOXELS_PER_COMPONENT,
+        MAX_SEGMENTATION_RATIO,
+        MIN_SEGMENTATION_RATIO
+    )
+    from utils.segmentation_validator import validate_and_clean
 except ModuleNotFoundError:
     # Allow running as a script: python utils/segment.py
     import sys as _sys
     from pathlib import Path as _Path
     _sys.path.append(str(_Path(__file__).resolve().parents[1]))
     from utils.config_manager import ConfigManager
-    from utils.constants import MIN_FILE_SIZE_MB
+    from utils.constants import (
+        MIN_FILE_SIZE_MB,
+        ENABLE_SEGMENTATION_VALIDATION,
+        ENABLE_SEGMENTATION_CLEANUP,
+        MIN_VOXELS_PER_LABEL,
+        MIN_VOXELS_PER_COMPONENT,
+        MAX_SEGMENTATION_RATIO,
+        MIN_SEGMENTATION_RATIO
+    )
+    from utils.segmentation_validator import validate_and_clean
 
 # Load environment variables
 load_dotenv()
@@ -106,6 +125,175 @@ def create_patient_folder_structure(patient_id: str):
         'voxels': voxels_dir
     }
 
+def generate_validation_report(
+    validation_results: List[Dict[str, Any]],
+    patient_id: str,
+    scan_name: str,
+    nifti_file_path: Path,
+    validation_config: Dict[str, Any]
+) -> str:
+    """
+    Generate a comprehensive markdown validation report.
+    
+    Args:
+        validation_results: List of validation result dictionaries
+        patient_id: Patient identifier
+        scan_name: Name of the scan
+        nifti_file_path: Path to the input NIfTI file
+        validation_config: Validation configuration used
+        
+    Returns:
+        Markdown formatted report string
+    """
+    from datetime import datetime
+    
+    report_lines = []
+    report_lines.append("# Segmentation Validation Report")
+    report_lines.append("")
+    report_lines.append(f"**Patient ID:** {patient_id}")
+    report_lines.append(f"**Scan:** {scan_name}")
+    report_lines.append(f"**Input File:** {nifti_file_path.name}")
+    report_lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report_lines.append("")
+    report_lines.append("---")
+    report_lines.append("")
+    
+    # Get the most recent validation result (or aggregate if multiple)
+    if validation_results:
+        result = validation_results[-1]  # Use most recent result
+        
+        # Overall Status
+        report_lines.append("## Overall Status")
+        report_lines.append("")
+        if result['valid'] and not result['warnings']:
+            report_lines.append("✅ **PASSED** - No issues detected")
+        elif result['valid']:
+            report_lines.append(f"⚠️ **PASSED WITH WARNINGS** - {len(result['warnings'])} warning(s) found")
+        else:
+            report_lines.append(f"❌ **FAILED** - {len(result['errors'])} error(s) found")
+        report_lines.append("")
+        
+        # Statistics
+        stats = result['stats']
+        report_lines.append("## Statistics")
+        report_lines.append("")
+        report_lines.append("| Metric | Value |")
+        report_lines.append("|--------|-------|")
+        report_lines.append(f"| Total Voxels | {stats.get('total_voxels', 0):,} |")
+        report_lines.append(f"| Segmented Voxels | {stats.get('segmented_voxels', 0):,} |")
+        report_lines.append(f"| Segmentation Ratio | {stats.get('segmentation_ratio', 0):.2%} |")
+        report_lines.append(f"| Number of Labels | {stats.get('num_labels', 0)} |")
+        
+        if 'label_ids' in stats and stats['label_ids']:
+            label_list = ', '.join([str(lid) for lid in stats['label_ids'][:20]])
+            if len(stats['label_ids']) > 20:
+                label_list += f" ... (and {len(stats['label_ids']) - 20} more)"
+            report_lines.append(f"| Label IDs | {label_list} |")
+        
+        if result['cleaned']:
+            report_lines.append("")
+            report_lines.append("### Cleanup Statistics")
+            report_lines.append("")
+            report_lines.append("| Operation | Count |")
+            report_lines.append("|-----------|-------|")
+            if 'components_removed' in stats:
+                report_lines.append(f"| Small Components Removed | {stats['components_removed']} |")
+            if 'artifacts_removed' in stats:
+                report_lines.append(f"| Artifact Voxels Removed | {stats['artifacts_removed']} |")
+        
+        report_lines.append("")
+        
+        # Errors
+        if result['errors']:
+            report_lines.append("## Errors")
+            report_lines.append("")
+            for i, error in enumerate(result['errors'], 1):
+                report_lines.append(f"{i}. ❌ {error}")
+            report_lines.append("")
+        
+        # Warnings
+        if result['warnings']:
+            report_lines.append("## Warnings")
+            report_lines.append("")
+            for i, warning in enumerate(result['warnings'], 1):
+                report_lines.append(f"{i}. ⚠️ {warning}")
+            report_lines.append("")
+        
+        # Validation Configuration
+        report_lines.append("## Validation Configuration")
+        report_lines.append("")
+        report_lines.append("| Setting | Value |")
+        report_lines.append("|---------|-------|")
+        report_lines.append(f"| Validation Enabled | {validation_config.get('enable_validation', 'N/A')} |")
+        report_lines.append(f"| Cleanup Enabled | {validation_config.get('enable_cleanup', 'N/A')} |")
+        report_lines.append(f"| Min Voxels per Label | {validation_config.get('min_voxels_per_label', 'N/A')} |")
+        report_lines.append(f"| Min Voxels per Component | {validation_config.get('min_voxels_per_component', 'N/A')} |")
+        report_lines.append(f"| Max Segmentation Ratio | {validation_config.get('max_segmentation_ratio', 'N/A')} |")
+        report_lines.append(f"| Min Segmentation Ratio | {validation_config.get('min_segmentation_ratio', 'N/A')} |")
+        report_lines.append("")
+        
+        # Label Details
+        if 'label_ids' in stats and stats['label_ids']:
+            report_lines.append("## Label Details")
+            report_lines.append("")
+            report_lines.append("| Label ID | Label Name | Status |")
+            report_lines.append("|----------|-----------|--------|")
+            
+            for label_id in stats['label_ids']:
+                label_info = LABEL_DICT.get(label_id, {})
+                label_name = label_info.get('name', f'Unknown (ID: {label_id})')
+                
+                # Check if this label has warnings
+                label_warnings = [w for w in result['warnings'] if f'ID: {label_id}' in w or label_name in w]
+                if label_warnings:
+                    status = f"⚠️ {len(label_warnings)} warning(s)"
+                else:
+                    status = "✅ OK"
+                
+                report_lines.append(f"| {label_id} | {label_name} | {status} |")
+            report_lines.append("")
+        
+        # Recommendations
+        report_lines.append("## Recommendations")
+        report_lines.append("")
+        
+        recommendations = []
+        
+        if result['errors']:
+            recommendations.append("- **Review errors immediately** - Critical issues detected that may affect segmentation quality")
+        
+        if len(result['warnings']) > 5:
+            recommendations.append("- **Multiple warnings detected** - Consider reviewing segmentation parameters or input image quality")
+        
+        if stats.get('segmentation_ratio', 0) > 0.9:
+            recommendations.append("- **High segmentation ratio** - Segmentation covers most of the volume. Verify this is expected for your use case.")
+        
+        if stats.get('segmentation_ratio', 0) < 0.01:
+            recommendations.append("- **Low segmentation ratio** - Segmentation covers very little of the volume. Consider checking if target structures are present in the image.")
+        
+        if stats.get('num_labels', 0) == 0:
+            recommendations.append("- **No labels found** - Segmentation appears empty. Check if segmentation completed successfully.")
+        
+        if result['cleaned']:
+            recommendations.append("- **Cleanup was applied** - Review cleaned segmentation to ensure valid structures were not removed")
+        
+        if not recommendations:
+            recommendations.append("- **No issues detected** - Segmentation quality appears good")
+        
+        for rec in recommendations:
+            report_lines.append(rec)
+        report_lines.append("")
+        
+        # Footer
+        report_lines.append("---")
+        report_lines.append("")
+        report_lines.append("*This report was automatically generated by the Vista-3D segmentation validation system.*")
+        report_lines.append("")
+        report_lines.append("*For more information about validation settings and configuration, see the documentation in the project's docs folder.*")
+    
+    return "\n".join(report_lines)
+
+
 def create_individual_voxel_files(segmentation_img, ct_scan_name: str, voxels_base_dir: Path, target_vessel_ids: list):
     """Create individual voxel files for each label in the segmentation."""
     # Create folder for this CT scan's voxels
@@ -182,6 +370,8 @@ def main():
     print("--- Vista3D Batch Segmentation Script ---")
 
     for patient_folder_name in tqdm(patient_folders_to_process, desc="Processing patients"):
+        # Track validation results for this patient to generate report
+        patient_validation_results = []
         # The patient folder is now the base for nifti, scans, etc.
         patient_base_path = NIFTI_INPUT_BASE_DIR / patient_folder_name
         patient_nifti_path = patient_base_path / "nifti"
@@ -344,6 +534,79 @@ def main():
                 
                 print(f"    Data type of raw_nifti_img data: {raw_nifti_img.get_fdata().dtype}")
                 print(f"    NIfTI header datatype: {raw_nifti_img.header['datatype']}")
+                
+                # Prepare validation config (needed for report generation)
+                validation_config = {
+                    'enable_cleanup': ENABLE_SEGMENTATION_CLEANUP,
+                    'min_voxels_per_label': MIN_VOXELS_PER_LABEL,
+                    'min_voxels_per_component': MIN_VOXELS_PER_COMPONENT,
+                    'max_segmentation_ratio': MAX_SEGMENTATION_RATIO,
+                    'min_segmentation_ratio': MIN_SEGMENTATION_RATIO
+                }
+                
+                # Validate and optionally clean segmentation
+                if ENABLE_SEGMENTATION_VALIDATION:
+                    print(f"    Running segmentation validation...")
+                    try:
+                        # Load input image for comparison (only if validation enabled)
+                        input_img = None
+                        if nifti_file_path.exists():
+                            input_img = nib.load(str(nifti_file_path))
+                        
+                        # Run validation
+                        validation_result = validate_and_clean(
+                            raw_nifti_img,
+                            input_img,
+                            LABEL_DICT,
+                            validation_config
+                        )
+                        
+                        # Store validation result for report generation
+                        validation_result['scan_name'] = ct_scan_folder_name
+                        validation_result['nifti_file'] = nifti_file_path.name
+                        patient_validation_results.append(validation_result)
+                        
+                        # Log validation results
+                        if validation_result['errors']:
+                            print(f"    ⚠️  Validation Errors:")
+                            for error in validation_result['errors']:
+                                print(f"      ❌ {error}")
+                        
+                        if validation_result['warnings']:
+                            print(f"    ⚠️  Validation Warnings ({len(validation_result['warnings'])}):")
+                            for warning in validation_result['warnings'][:5]:  # Show first 5 warnings
+                                print(f"      ⚠️  {warning}")
+                            if len(validation_result['warnings']) > 5:
+                                print(f"      ... and {len(validation_result['warnings']) - 5} more warning(s)")
+                        
+                        # Log statistics
+                        stats = validation_result['stats']
+                        print(f"    Validation Statistics:")
+                        print(f"      Labels found: {stats.get('num_labels', 0)}")
+                        print(f"      Segmented voxels: {stats.get('segmented_voxels', 0):,}")
+                        print(f"      Segmentation ratio: {stats.get('segmentation_ratio', 0):.2%}")
+                        
+                        if validation_result['cleaned']:
+                            print(f"    ✅ Cleanup applied:")
+                            if 'components_removed' in stats:
+                                print(f"      Removed {stats['components_removed']} small component(s)")
+                            if 'artifacts_removed' in stats:
+                                print(f"      Removed {stats['artifacts_removed']} artifact voxel(s)")
+                            # Use cleaned image
+                            raw_nifti_img = validation_result['cleaned_img']
+                        
+                        if validation_result['valid'] and not validation_result['warnings']:
+                            print(f"    ✅ Validation passed with no issues")
+                        elif validation_result['valid']:
+                            print(f"    ⚠️  Validation passed with warnings")
+                        else:
+                            print(f"    ❌ Validation failed with errors (continuing anyway)")
+                    
+                    except Exception as validation_error:
+                        print(f"    ⚠️  Validation error (continuing): {validation_error}")
+                        import traceback
+                        traceback.print_exc()
+                
                 # Save full segmentation to voxels folder
                 nib.save(raw_nifti_img, segmentation_output_path)
                 print(f"    Successfully saved segmentation: {segmentation_output_path.name}")
@@ -362,6 +625,51 @@ def main():
                 print(f"\n  Error during inference for {nifti_file_path.name}: {e}")
             except Exception as e:
                 print(f"\n  An unexpected error occurred for {nifti_file_path.name}: {e}")
+        
+        # Generate and save validation report for this patient
+        if ENABLE_SEGMENTATION_VALIDATION and patient_validation_results:
+            try:
+                # Use the most recent validation result for the report
+                # (or could aggregate all results for a comprehensive patient-level report)
+                latest_result = patient_validation_results[-1]
+                scan_name = latest_result.get('scan_name', 'unknown')
+                nifti_file = latest_result.get('nifti_file', 'unknown')
+                
+                # Find the corresponding nifti file path
+                report_nifti_path = patient_nifti_path / nifti_file
+                if not report_nifti_path.exists():
+                    # Try to find any nifti file in the folder
+                    nifti_files = list(patient_nifti_path.glob('*.nii*'))
+                    if nifti_files:
+                        report_nifti_path = nifti_files[0]
+                
+                # Prepare validation config for report (recreate if needed)
+                validation_config_for_report = {
+                    'enable_validation': ENABLE_SEGMENTATION_VALIDATION,
+                    'enable_cleanup': ENABLE_SEGMENTATION_CLEANUP,
+                    'min_voxels_per_label': MIN_VOXELS_PER_LABEL,
+                    'min_voxels_per_component': MIN_VOXELS_PER_COMPONENT,
+                    'max_segmentation_ratio': MAX_SEGMENTATION_RATIO,
+                    'min_segmentation_ratio': MIN_SEGMENTATION_RATIO
+                }
+                
+                report_content = generate_validation_report(
+                    patient_validation_results,
+                    patient_folder_name,
+                    scan_name,
+                    report_nifti_path,
+                    validation_config_for_report
+                )
+                
+                # Save report to patient nifti folder
+                report_path = patient_nifti_path / "segment_validation.md"
+                report_path.write_text(report_content, encoding='utf-8')
+                print(f"\n  ✅ Saved validation report: {report_path}")
+                
+            except Exception as report_error:
+                print(f"\n  ⚠️  Error generating validation report: {report_error}")
+                import traceback
+                traceback.print_exc()
 
     print("\n--- Segmentation Process Complete ---")
 

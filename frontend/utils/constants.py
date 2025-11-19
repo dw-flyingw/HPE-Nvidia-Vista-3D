@@ -392,6 +392,15 @@ DEBUG_MODE = False
 # File size filtering
 MIN_FILE_SIZE_MB = 3.5  # Minimum file size in MB for processing
 
+# Segmentation validation and cleanup settings
+# These can be overridden via environment variables
+ENABLE_SEGMENTATION_VALIDATION = os.getenv('ENABLE_SEGMENTATION_VALIDATION', 'true').lower() in ('true', '1', 'yes', 'on')
+ENABLE_SEGMENTATION_CLEANUP = os.getenv('ENABLE_SEGMENTATION_CLEANUP', 'true').lower() in ('true', '1', 'yes', 'on')
+MIN_VOXELS_PER_LABEL = int(os.getenv('MIN_VOXELS_PER_LABEL', '10'))
+MIN_VOXELS_PER_COMPONENT = int(os.getenv('MIN_VOXELS_PER_COMPONENT', '10'))
+MAX_SEGMENTATION_RATIO = float(os.getenv('MAX_SEGMENTATION_RATIO', '0.95'))
+MIN_SEGMENTATION_RATIO = float(os.getenv('MIN_SEGMENTATION_RATIO', '0.001'))
+
 # Configuration file paths
 CONFIG_FILES = {
     'label_colors': 'conf/vista3d_label_colors.json',

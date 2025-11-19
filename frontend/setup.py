@@ -119,6 +119,15 @@ IMAGE_SERVER_PORT=8888
 # Configuration
 VESSELS_OF_INTEREST=all
 COMPOSE_PROJECT_NAME=vista3d-frontend
+
+# Segmentation Validation Settings (defaults: validation and cleanup enabled)
+# Set to false to disable validation/cleanup if needed
+ENABLE_SEGMENTATION_VALIDATION=true
+ENABLE_SEGMENTATION_CLEANUP=true
+MIN_VOXELS_PER_LABEL=10
+MIN_VOXELS_PER_COMPONENT=10
+MAX_SEGMENTATION_RATIO=0.95
+MIN_SEGMENTATION_RATIO=0.001
 """
     else:
         # Split deployment (Mac frontend, Ubuntu backend via SSH)
@@ -143,6 +152,15 @@ IMAGE_SERVER_PORT=8888
 # Configuration
 VESSELS_OF_INTEREST=all
 COMPOSE_PROJECT_NAME=vista3d-frontend
+
+# Segmentation Validation Settings (defaults: validation and cleanup enabled)
+# Set to false to disable validation/cleanup if needed
+ENABLE_SEGMENTATION_VALIDATION=true
+ENABLE_SEGMENTATION_CLEANUP=true
+MIN_VOXELS_PER_LABEL=10
+MIN_VOXELS_PER_COMPONENT=10
+MAX_SEGMENTATION_RATIO=0.95
+MIN_SEGMENTATION_RATIO=0.001
 """
     
     env_file = Path(__file__).parent / '.env'
