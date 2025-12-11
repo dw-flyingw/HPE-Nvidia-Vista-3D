@@ -51,6 +51,5 @@ services:
 
 networks:
   vista3d-network:
-    external: true
 
 
