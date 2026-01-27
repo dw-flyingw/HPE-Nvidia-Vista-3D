@@ -79,8 +79,16 @@ services:
       - TORCH_USE_CUDA_DSA=1
       - DOMAIN_WHITELIST=[".*","http://.*","https://.*","http://.*:.*","https://.*:.*","file:///.*","*"]
       - SUPPORTED_IMAGE_EXT=[".nrrd",".nii",".nii.gz",".dcm"]
+      - HTTP_PROXY=http://hpeproxy.its.hpecorp.net:8080
+      - HTTPS_PROXY=http://hpeproxy.its.hpecorp.net:8080
+      - NO_PROXY=localhost,127.0.0.1,.hpecorp.net,.hpe.com,vista3d-image-server-for-frontend,172.24.0.0/16,*.local
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-bundle-combined.pem
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-bundle-combined.pem
+      - CURL_CA_BUNDLE=/etc/ssl/certs/ca-bundle-combined.pem
+      - TRT_INFERENCE=False
     volumes:
       - ${OUTPUT_FOLDER:-./output}:/workspace/output
+      - /home/users/wrightda/.ca-bundle-combined.pem:/etc/ssl/certs/ca-bundle-combined.pem:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     deploy:

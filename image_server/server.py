@@ -31,6 +31,9 @@ def resolve_folder_path(env_var_name: str) -> str:
 output_folder = resolve_folder_path('OUTPUT_FOLDER')
 dicom_folder = resolve_folder_path('DICOM_FOLDER')
 
+# Support for reverse proxy deployments (e.g., nginx with /images/ prefix)
+ROOT_PATH = os.getenv('ROOT_PATH', '')
+
 
 def get_server_config():
     image_server_url = os.getenv("IMAGE_SERVER", "http://localhost:8888")
@@ -148,13 +151,13 @@ def generate_directory_listing(directory_path: Path, request_path: str) -> str:
             parent_path = str(Path(request_path).parent)
             if parent_path == ".":
                 parent_path = "/"
-            items.append(f'<li><a href="{parent_path}">📁 ../</a></li>')
+            items.append(f'<li><a href="{ROOT_PATH}{parent_path}">📁 ../</a></li>')
 
         for item in sorted(directory_path.iterdir()):
             if item.is_dir() and not item.name.startswith('.'):
                 item_name = item.name
                 item_path = f"{request_path.rstrip('/')}/{item_name}/"
-                items.append(f'<li><a href="{item_path}">📁 {item_name}/</a></li>')
+                items.append(f'<li><a href="{ROOT_PATH}{item_path}">📁 {item_name}/</a></li>')
                 dir_count += 1
 
         for item in sorted(directory_path.iterdir()):
@@ -164,7 +167,7 @@ def generate_directory_listing(directory_path: Path, request_path: str) -> str:
                 file_size = item.stat().st_size
                 file_count += 1
                 size_str = f"({file_size:,} bytes)" if file_size < 1024*1024 else f"({file_size/(1024*1024):.1f} MB)"
-                items.append(f'<li><a href="{item_path}">📄 {item_name}</a> <span class="meta">{size_str}</span></li>')
+                items.append(f'<li><a href="{ROOT_PATH}{item_path}">📄 {item_name}</a> <span class="meta">{size_str}</span></li>')
 
     except Exception as e:
         items.append(f'<li><span class="error">Error reading directory: {e}</span></li>')
@@ -441,7 +444,7 @@ def generate_restricted_root_listing() -> HTMLResponse:
         folder_icon = folder_config.get("icon", "📁")
         full_path = Path(folder_path)
         if full_path.exists() and full_path.is_dir():
-            items.append(f'<li><a href="/{folder_url_path}/">{folder_icon} {folder_name}/</a> <span class="meta">({folder_description})</span></li>')
+            items.append(f'<li><a href="{ROOT_PATH}/{folder_url_path}/">{folder_icon} {folder_name}/</a> <span class="meta">({folder_description})</span></li>')
     if not items:
         items.append('<li><span class="meta">No accessible folders found</span></li>')
     items_html = "\n".join(items)

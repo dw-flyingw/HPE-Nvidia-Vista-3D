@@ -3,6 +3,10 @@
 import streamlit as st
 import os
 import requests
+import urllib3
+
+# Disable SSL warnings when using self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def check_image_server_status():
     """Check if the image server is available by requesting the health endpoint."""
@@ -14,7 +18,7 @@ def check_image_server_status():
     try:
         # Use the /health endpoint which the FastAPI server provides
         health_url = f"{image_server_url.rstrip('/')}/health"
-        response = requests.get(health_url, timeout=5)
+        response = requests.get(health_url, timeout=5, verify=False)
         if response.status_code == 200:
             return True
     except (requests.exceptions.RequestException, requests.exceptions.Timeout):
@@ -26,7 +30,7 @@ def check_image_server_status():
         try:
             docker_url = image_server_url.replace("localhost", "image-server").replace("127.0.0.1", "image-server")
             health_url = f"{docker_url.rstrip('/')}/health"
-            response = requests.get(health_url, timeout=5)
+            response = requests.get(health_url, timeout=5, verify=False)
             return response.status_code == 200
         except (requests.exceptions.RequestException, requests.exceptions.Timeout):
             pass
@@ -49,7 +53,7 @@ def check_vista3d_server_status():
             print("DEBUG: Using API Key for Vista3D status check.")
 
         # Make the request with the new headers
-        response = requests.get(f"{vista3d_server_url.rstrip('/')}/v1/vista3d/info", headers=headers, timeout=3)
+        response = requests.get(f"{vista3d_server_url.rstrip('/')}/v1/vista3d/info", headers=headers, timeout=3, verify=False)
         return response.status_code == 200
     except requests.exceptions.RequestException:
         return False

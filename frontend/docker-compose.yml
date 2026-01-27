@@ -42,14 +42,18 @@ services:
       - OUTPUT_FOLDER=/data/output
       - DICOM_FOLDER=/data/dicom
       - IMAGE_SERVER=http://localhost:8888
+      - ROOT_PATH=${ROOT_PATH:-}
     volumes:
       - ${OUTPUT_FOLDER:-../output}:/data/output:ro
       - ${DICOM_FOLDER:-../dicom}:/data/dicom:ro
+      # Mount image server source code for live development
+      - ../image_server:/srv
     restart: unless-stopped
     networks:
       - vista3d-network
 
 networks:
   vista3d-network:
+    external: true  # Use the existing external network shared with backend
 
 

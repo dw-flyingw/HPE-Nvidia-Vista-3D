@@ -2,6 +2,7 @@
 headless = true
 port = 8501
 address = "0.0.0.0"
+# baseUrlPath = "/vista3d"  # NOT needed - nginx strips the prefix before forwarding
 
 [browser]
 gatherUsageStats = false
