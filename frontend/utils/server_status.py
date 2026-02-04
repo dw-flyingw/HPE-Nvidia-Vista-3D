@@ -60,19 +60,16 @@ def check_vista3d_server_status():
 
 def render_server_status_sidebar():
     """Render server status message in sidebar."""
-    # This part remains the same, it just calls the corrected functions above.
-    image_server_url = os.getenv("IMAGE_SERVER", "Not Configured")
     if check_image_server_status():
-        st.sidebar.success(f"""📥 **Image Server**  
-✅ Online • {image_server_url}""")
+        st.sidebar.success("""📥 **Image Server**
+✅ Online""")
     else:
-        st.sidebar.error(f"""📥 **Image Server**  
-❌ Offline • {image_server_url}""")
+        st.sidebar.error("""📥 **Image Server**
+❌ Offline""")
 
-    vista3d_server_url = os.getenv("VISTA3D_SERVER", "Not Configured")
     if check_vista3d_server_status():
-        st.sidebar.success(f"""🫁 **Vista3D Server**  
-✅ Online • {vista3d_server_url}""")
+        st.sidebar.success("""🫁 **Vista3D Server**
+✅ Online""")
     else:
-        st.sidebar.error(f"""🫁 **Vista3D Server**  
-❌ Offline • {vista3d_server_url}""")
+        st.sidebar.error("""🫁 **Vista3D Server**
+❌ Offline""")
