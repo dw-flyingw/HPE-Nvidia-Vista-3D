@@ -91,6 +91,7 @@ services:
       - /home/users/wrightda/.ca-bundle-combined.pem:/etc/ssl/certs/ca-bundle-combined.pem:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: unless-stopped
     deploy:
       resources:
         reservations:
