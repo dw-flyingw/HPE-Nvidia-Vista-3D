@@ -49,60 +49,66 @@ ssh -L 8000:localhost:8000 -R 8888:0.0.0.0:8888 user@ubuntu-server
 - `-L 8000:localhost:8000` - Forward tunnel: Access remote Vista3D
 - `-R 8888:0.0.0.0:8888` - Reverse tunnel: Backend accesses local image server (MUST use 0.0.0.0)
 
-### Nginx Reverse Proxy Deployment
+### Nginx Port-Based SSL Proxy Deployment
 
 **Current Production Setup** (`/etc/nginx/sites-available/moto`):
-- **External URL**: `https://moto.hst.rdlabs.hpecorp.net`
-- **Frontend Path**: `/vista3d/` → `localhost:8501` (Streamlit)
-- **Image Server Path**: `/images/` → `localhost:8888`
-- **SSL Termination**: At nginx (port 443)
+- **Homepage**: `https://moto.hst.rdlabs.hpecorp.net` (port 443 → gethomepage)
+- **Vista3D Frontend**: `https://moto.hst.rdlabs.hpecorp.net:8500` (SSL port 8500 → localhost:8501)
+- **Image Server**: `https://moto.hst.rdlabs.hpecorp.net:8887` (SSL port 8887 → localhost:8888)
+- **SSL Termination**: At nginx (per-port server blocks)
 - **WebSocket Support**: Configured with `Upgrade` headers for Streamlit
 - **Long Timeout**: `proxy_read_timeout 86400` (24 hours) for segmentation tasks
 
 **Streamlit Configuration:**
 
-**No special configuration needed** - nginx handles path stripping with the trailing slash in `proxy_pass http://localhost:8501/;`
+**No special configuration needed** - nginx proxies the root path directly to Streamlit on port 8501. No `baseUrlPath` required since there is no path prefix to strip.
 
-The trailing slash causes nginx to strip `/vista3d/` before forwarding to Streamlit, so Streamlit receives requests at root `/` and doesn't need `baseUrlPath` set.
-
-**Environment Variables for Reverse Proxy:**
+**Environment Variables for Port-Based Proxy:**
 ```bash
-# Frontend URLs (use public HTTPS URLs)
-IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/images"
-EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/images"
+# Frontend URLs (use public HTTPS URLs with SSL proxy ports)
+IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
 
 # Backend can still use localhost (all on same server)
 VISTA3D_SERVER="http://localhost:8000"
 VISTA3D_IMAGE_SERVER_URL="http://localhost:8888"
 
-# Image server root path (must match nginx location path)
-ROOT_PATH="/images"
+# Image server root path (empty - no path prefix with port-based routing)
+ROOT_PATH=""
 ```
 
 **Nginx Configuration Reference:**
 ```nginx
-# Frontend
-location /vista3d/ {
-    proxy_pass http://localhost:8501/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_read_timeout 86400;  # 24 hour timeout
+# Vista3D Frontend (SSL port 8500 -> localhost:8501)
+server {
+    listen 8500 ssl;
+    server_name moto.hst.rdlabs.hpecorp.net;
+    location / {
+        proxy_pass http://vista3d/;  # upstream localhost:8501
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;  # 24 hour timeout
+    }
 }
 
-# Image Server
-location /images/ {
-    proxy_pass http://localhost:8888/;
-    client_max_body_size 100M;  # Large medical files
+# Image Server (SSL port 8887 -> localhost:8888)
+server {
+    listen 8887 ssl;
+    server_name moto.hst.rdlabs.hpecorp.net;
+    location / {
+        proxy_pass http://imageserver/;  # upstream localhost:8888
+        client_max_body_size 100M;  # Large medical files
+    }
 }
 ```
 
 ### Docker Network Architecture
 
-**Reverse Proxy Deployment (Current Setup):**
-- **Backend**: No Docker network (communicates via localhost)
-- **Frontend + Image Server**: Share `vista3d-network` (frontend → image-server communication)
-- All inter-service communication happens via localhost (nginx reverse proxy handles routing)
+**Port-Based SSL Proxy Deployment (Current Setup):**
+- **All containers**: Share `vista3d-network` (Docker network)
+- **Frontend + Image Server**: Inter-container communication via Docker hostnames
+- **Nginx**: SSL termination on dedicated ports, proxies to localhost
 
 **Alternative Deployments:**
 - **SSH Tunnel**: Same as reverse proxy - localhost communication
@@ -224,18 +230,18 @@ There are **three separate `.env` files** in this project:
 
 ### Critical Variables (Must Set)
 
-**`frontend/.env` (for reverse proxy deployment):**
+**`frontend/.env` (for port-based SSL proxy deployment):**
 ```bash
 # Data directories (absolute paths required)
 DICOM_FOLDER="/absolute/path/to/dicom"
 OUTPUT_FOLDER="/absolute/path/to/output"
 
-# Server URLs (use public HTTPS URLs)
-IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/images"
-EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/images"
-VISTA3D_SERVER="http://localhost:8000"
-VISTA3D_IMAGE_SERVER_URL="http://localhost:8888"
-ROOT_PATH="/images"
+# Server URLs (use public HTTPS URLs with SSL proxy ports)
+IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+VISTA3D_SERVER="http://vista3d-server-standalone:8000"
+VISTA3D_IMAGE_SERVER_URL="http://vista3d-image-server-for-frontend:8888"
+ROOT_PATH=""
 ```
 
 **`backend/.env`:**
@@ -284,24 +290,24 @@ IMAGE_SERVER="http://localhost:8888"  # Frontend to image server
 # IMAGE_SERVER="http://localhost:8888"
 # ROOT_PATH=""  # Empty - no reverse proxy
 
-# For nginx reverse proxy deployment (moto.hst.rdlabs.hpecorp.net):
+# For nginx port-based SSL proxy deployment (moto.hst.rdlabs.hpecorp.net):
 # VISTA3D_SERVER="http://localhost:8000"
 # VISTA3D_IMAGE_SERVER_URL="http://localhost:8888"
-# IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/images"
-# EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/images"
-# ROOT_PATH="/images"  # Required - tells image server to prepend /images to all links
+# IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+# EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+# ROOT_PATH=""  # Empty - no path prefix with port-based routing
 ```
 
 ### Streamlit Configuration
 
 **Default configuration works for all deployments** - see `frontend/.streamlit/config.toml`.
 
-For nginx reverse proxy with path stripping (e.g., `/vista3d/` → `http://localhost:8501/`), no special `baseUrlPath` is needed.
+For nginx port-based SSL proxy (port 8500 → localhost:8501), no special `baseUrlPath` is needed since there is no path prefix.
 
 ### Docker-Specific Variables
 - `DOCKER_CONTAINER=true` - Set by Docker containers automatically
 - `host.docker.internal` - Mac Docker special hostname for host access
-- `ROOT_PATH` - **Optional**: Base path for image server when behind reverse proxy (e.g., `/images`). Leave empty for direct deployments.
+- `ROOT_PATH` - **Optional**: Base path for image server when behind path-based reverse proxy. Leave empty for port-based or direct deployments (current setup uses empty).
 
 ## Common Workflows
 
@@ -457,7 +463,7 @@ cat /etc/ssl/certs/ca-certificates.crt /path/to/zscaler-root.crt > ~/.ca-bundle-
 - Verify VISTA3D_SERVER in `frontend/.env` (NOT project root `.env`)
 
 ### Image Data opens localhost:8888 instead of public URL
-- Check `IMAGE_SERVER` in `frontend/.env` (Docker Compose reads `.env` from same directory as docker-compose.yml)
+- Check `IMAGE_SERVER` in `frontend/.env` should be `https://moto.hst.rdlabs.hpecorp.net:8887` (Docker Compose reads `.env` from same directory as docker-compose.yml)
 - Verify environment variable is set: `docker exec vista3d-frontend-standalone printenv IMAGE_SERVER`
 - Restart frontend after changing: `cd frontend && docker compose down && docker compose up -d`
 
@@ -516,15 +522,14 @@ ngc registry model download-version nim/nvidia/vista3d:0.5.7 --dest ./nim-cache
 - Check what's using port 8000: `docker ps -a | grep 8000`
 - Vista3D requires port 8000 for the AI inference API
 
-### Reverse proxy issues (nginx deployment)
-- **404 Not Found**: Check nginx `proxy_pass` has trailing slash: `http://localhost:8501/` (strips prefix)
-- **Broken links in image server**: Ensure `ROOT_PATH` environment variable is set (e.g., `/images`)
-- **Static assets not loading**: Ensure `proxy_pass` ends with `/` for proper path stripping
+### Nginx proxy issues (port-based SSL deployment)
+- **404 Not Found**: Verify nginx server block exists for the port (e.g., `listen 8500 ssl;` for Vista3D)
+- **Broken links in image server**: Ensure `ROOT_PATH` is empty for port-based routing (no path prefix needed)
 - **WebSocket disconnects**: Verify `proxy_http_version 1.1` and `Upgrade` headers in nginx config
-- **Streamlit routing errors**: Do NOT set `baseUrlPath` in Streamlit config (nginx handles path stripping)
+- **Streamlit routing errors**: Do NOT set `baseUrlPath` in Streamlit config (no path prefix with port-based routing)
 - **Segmentation timeout**: Increase `proxy_read_timeout` in nginx (currently set to 86400 seconds)
 - **Large file upload fails**: Check `client_max_body_size 100M` in nginx image server location
-- **Mixed content warnings**: Ensure `IMAGE_SERVER` uses HTTPS, not HTTP
+- **Mixed content warnings**: Ensure `IMAGE_SERVER` uses HTTPS with correct port (e.g., `https://host:8887`)
 
 ## Additional Documentation
 
