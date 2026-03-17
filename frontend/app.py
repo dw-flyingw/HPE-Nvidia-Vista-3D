@@ -1,4 +1,11 @@
+import time as _time
+_app_start = _time.time()
+def _log(msg):
+    print(f"[TIMING {_time.time()-_app_start:.3f}s] {msg}", flush=True)
+
+_log("START app.py")
 import streamlit as st
+_log("imported streamlit")
 from pathlib import Path
 import sys
 import requests
@@ -9,10 +16,14 @@ import json
 import base64
 import mimetypes
 from typing import List, Dict, Optional
+_log("imported stdlib")
 import pandas as pd
+_log("imported pandas")
 import plotly.express as px
 import plotly.graph_objects as go
-import extra_streamlit_components as stx
+_log("imported plotly")
+# import extra_streamlit_components as stx  # REMOVED: unused import
+_log("imports done")
 
 
 # Add the application root to the Python path to ensure modules are found.
@@ -31,41 +42,55 @@ except ImportError:
 
 # Add utils to path for imports
 sys.path.append(str(Path(__file__).parent / 'utils'))
+_log("before navigation import")
 from utils.navigation import render_navigation
+_log("after navigation import")
 from assets.vista3d_badge import render_nvidia_vista_card as _render_nvidia_vista_card
 from assets.hpe_badge import render_hpe_badge as _render_hpe_badge
 #from assets.niivue_badge import render_niivue_badge as _render_niivue_badge
 
 from utils.server_status import render_server_status_sidebar
+_log("all imports done")
 
 def render_nvidia_vista_card():
     """Delegate rendering to assets.vista3d_badge module."""
     _render_nvidia_vista_card()
+
+_log("before set_page_config")
 st.set_page_config(
     page_title="NIfTI Vessel Segmentation and Viewer",
     page_icon="🩻",
     layout="wide",
 )
+_log("after set_page_config")
 
 # Render navigation and get the navigation instance
+_log("before render_navigation")
 nav = render_navigation()
+_log("after render_navigation")
 
 # Main content based on current page
 current_page = nav.get_current_page()
+_log(f"current_page = {current_page}")
 
 if current_page == 'home':
+    _log("before render_nvidia_vista_card")
     # Render Nvidia Vista 3D card in sidebar
     render_nvidia_vista_card()
+    _log("after render_nvidia_vista_card")
     # Render HPE AI badge in sidebar
     _render_hpe_badge()
+    _log("after render_hpe_badge")
     # Render NiiVue badge in sidebar
     #_render_niivue_badge()
-    
+
     # Add spacing between HPE badge and server status widgets
     st.sidebar.markdown("")
-    
+
+    _log("before render_server_status_sidebar")
     # Render server status widgets in sidebar
     render_server_status_sidebar()
+    _log("after render_server_status_sidebar")
     
     
     # Welcome message and navigation guidance
