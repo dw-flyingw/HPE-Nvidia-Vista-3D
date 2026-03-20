@@ -5,7 +5,7 @@ address = "0.0.0.0"
 fileWatcherType = "none"
 enableCORS = false
 enableXsrfProtection = false
-# baseUrlPath = "/vista3d"  # NOT needed - nginx strips the prefix before forwarding
+baseUrlPath = "/vista"
 
 [browser]
 gatherUsageStats = false

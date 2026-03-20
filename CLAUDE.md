@@ -49,66 +49,43 @@ ssh -L 8000:localhost:8000 -R 8888:0.0.0.0:8888 user@ubuntu-server
 - `-L 8000:localhost:8000` - Forward tunnel: Access remote Vista3D
 - `-R 8888:0.0.0.0:8888` - Reverse tunnel: Backend accesses local image server (MUST use 0.0.0.0)
 
-### Nginx Port-Based SSL Proxy Deployment
+### Traefik Path-Based Proxy Deployment
 
-**Current Production Setup** (`/etc/nginx/sites-available/moto`):
+**Current Production Setup** (`/data/opt/Traefik/dynamic.yml`):
 - **Homepage**: `https://moto.hst.rdlabs.hpecorp.net` (port 443 → gethomepage)
-- **Vista3D Frontend**: `https://moto.hst.rdlabs.hpecorp.net:8500` (SSL port 8500 → localhost:8501)
-- **Image Server**: `https://moto.hst.rdlabs.hpecorp.net:8887` (SSL port 8887 → localhost:8888)
-- **SSL Termination**: At nginx (per-port server blocks)
-- **WebSocket Support**: Configured with `Upgrade` headers for Streamlit
-- **Long Timeout**: `proxy_read_timeout 86400` (24 hours) for segmentation tasks
+- **Vista3D Frontend**: `https://moto.hst.rdlabs.hpecorp.net/vista` (Traefik → localhost:8501)
+- **Image Server**: `https://moto.hst.rdlabs.hpecorp.net/vista-images` (Traefik → localhost:8888)
+- **SSL Termination**: At Traefik (port 443)
+- **WebSocket Support**: Traefik v3 handles WebSocket upgrades automatically
 
 **Streamlit Configuration:**
 
-**No special configuration needed** - nginx proxies the root path directly to Streamlit on port 8501. No `baseUrlPath` required since there is no path prefix to strip.
+Streamlit `baseUrlPath = "/vista"` is set in `frontend/.streamlit/config.toml`. Traefik forwards `/vista/*` requests to Streamlit without stripping the prefix — Streamlit handles the prefix natively.
 
-**Environment Variables for Port-Based Proxy:**
+**Environment Variables for Traefik Proxy:**
 ```bash
-# Frontend URLs (use public HTTPS URLs with SSL proxy ports)
-IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
-EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+# Frontend URLs (use public HTTPS URLs with Traefik path prefixes)
+IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/vista-images"
+EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/vista-images"
 
 # Backend can still use localhost (all on same server)
 VISTA3D_SERVER="http://localhost:8000"
 VISTA3D_IMAGE_SERVER_URL="http://localhost:8888"
 
-# Image server root path (empty - no path prefix with port-based routing)
-ROOT_PATH=""
+# Image server root path (Traefik strips /vista-images, ROOT_PATH adds it back in HTML links)
+ROOT_PATH="/vista-images"
 ```
 
-**Nginx Configuration Reference:**
-```nginx
-# Vista3D Frontend (SSL port 8500 -> localhost:8501)
-server {
-    listen 8500 ssl;
-    server_name moto.hst.rdlabs.hpecorp.net;
-    location / {
-        proxy_pass http://vista3d/;  # upstream localhost:8501
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_read_timeout 86400;  # 24 hour timeout
-    }
-}
-
-# Image Server (SSL port 8887 -> localhost:8888)
-server {
-    listen 8887 ssl;
-    server_name moto.hst.rdlabs.hpecorp.net;
-    location / {
-        proxy_pass http://imageserver/;  # upstream localhost:8888
-        client_max_body_size 100M;  # Large medical files
-    }
-}
-```
+**Traefik Routing:**
+- `/vista` → `http://host.docker.internal:8501` (no prefix strip — Streamlit handles via `baseUrlPath`)
+- `/vista-images` → `http://host.docker.internal:8888` (prefix stripped by Traefik, `ROOT_PATH` for HTML links)
 
 ### Docker Network Architecture
 
-**Port-Based SSL Proxy Deployment (Current Setup):**
-- **All containers**: Share `vista3d-network` (Docker network)
+**Traefik Path-Based Proxy Deployment (Current Setup):**
+- **All containers**: Share `vista3d-network` (Docker network) for inter-container communication
+- **Traefik**: Routes via `host.docker.internal` to reach containers on the host
 - **Frontend + Image Server**: Inter-container communication via Docker hostnames
-- **Nginx**: SSL termination on dedicated ports, proxies to localhost
 
 **Alternative Deployments:**
 - **SSH Tunnel**: Same as reverse proxy - localhost communication
@@ -230,18 +207,18 @@ There are **three separate `.env` files** in this project:
 
 ### Critical Variables (Must Set)
 
-**`frontend/.env` (for port-based SSL proxy deployment):**
+**`frontend/.env` (for Traefik path-based proxy deployment):**
 ```bash
 # Data directories (absolute paths required)
 DICOM_FOLDER="/absolute/path/to/dicom"
 OUTPUT_FOLDER="/absolute/path/to/output"
 
-# Server URLs (use public HTTPS URLs with SSL proxy ports)
-IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
-EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
+# Server URLs (use public HTTPS URLs with Traefik path prefixes)
+IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/vista-images"
+EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/vista-images"
 VISTA3D_SERVER="http://vista3d-server-standalone:8000"
 VISTA3D_IMAGE_SERVER_URL="http://vista3d-image-server-for-frontend:8888"
-ROOT_PATH=""
+ROOT_PATH="/vista-images"
 ```
 
 **`backend/.env`:**
@@ -290,24 +267,22 @@ IMAGE_SERVER="http://localhost:8888"  # Frontend to image server
 # IMAGE_SERVER="http://localhost:8888"
 # ROOT_PATH=""  # Empty - no reverse proxy
 
-# For nginx port-based SSL proxy deployment (moto.hst.rdlabs.hpecorp.net):
+# For Traefik path-based proxy deployment (moto.hst.rdlabs.hpecorp.net):
 # VISTA3D_SERVER="http://localhost:8000"
 # VISTA3D_IMAGE_SERVER_URL="http://localhost:8888"
-# IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
-# EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net:8887"
-# ROOT_PATH=""  # Empty - no path prefix with port-based routing
+# IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/vista-images"
+# EXTERNAL_IMAGE_SERVER="https://moto.hst.rdlabs.hpecorp.net/vista-images"
+# ROOT_PATH="/vista-images"
 ```
 
 ### Streamlit Configuration
 
-**Default configuration works for all deployments** - see `frontend/.streamlit/config.toml`.
-
-For nginx port-based SSL proxy (port 8500 → localhost:8501), no special `baseUrlPath` is needed since there is no path prefix.
+See `frontend/.streamlit/config.toml`. For the current Traefik deployment, `baseUrlPath = "/vista"` is set so Streamlit serves all assets and WebSocket connections under the `/vista` prefix.
 
 ### Docker-Specific Variables
 - `DOCKER_CONTAINER=true` - Set by Docker containers automatically
 - `host.docker.internal` - Mac Docker special hostname for host access
-- `ROOT_PATH` - **Optional**: Base path for image server when behind path-based reverse proxy. Leave empty for port-based or direct deployments (current setup uses empty).
+- `ROOT_PATH` - Base path for image server HTML links when behind path-based reverse proxy. Set to `/vista-images` for current Traefik deployment. Leave empty for direct or port-based deployments.
 
 ## Common Workflows
 
@@ -463,7 +438,7 @@ cat /etc/ssl/certs/ca-certificates.crt /path/to/zscaler-root.crt > ~/.ca-bundle-
 - Verify VISTA3D_SERVER in `frontend/.env` (NOT project root `.env`)
 
 ### Image Data opens localhost:8888 instead of public URL
-- Check `IMAGE_SERVER` in `frontend/.env` should be `https://moto.hst.rdlabs.hpecorp.net:8887` (Docker Compose reads `.env` from same directory as docker-compose.yml)
+- Check `IMAGE_SERVER` in `frontend/.env` should be `https://moto.hst.rdlabs.hpecorp.net/vista-images` (Docker Compose reads `.env` from same directory as docker-compose.yml)
 - Verify environment variable is set: `docker exec vista3d-frontend-standalone printenv IMAGE_SERVER`
 - Restart frontend after changing: `cd frontend && docker compose down && docker compose up -d`
 
@@ -522,14 +497,12 @@ ngc registry model download-version nim/nvidia/vista3d:0.5.7 --dest ./nim-cache
 - Check what's using port 8000: `docker ps -a | grep 8000`
 - Vista3D requires port 8000 for the AI inference API
 
-### Nginx proxy issues (port-based SSL deployment)
-- **404 Not Found**: Verify nginx server block exists for the port (e.g., `listen 8500 ssl;` for Vista3D)
-- **Broken links in image server**: Ensure `ROOT_PATH` is empty for port-based routing (no path prefix needed)
-- **WebSocket disconnects**: Verify `proxy_http_version 1.1` and `Upgrade` headers in nginx config
-- **Streamlit routing errors**: Do NOT set `baseUrlPath` in Streamlit config (no path prefix with port-based routing)
-- **Segmentation timeout**: Increase `proxy_read_timeout` in nginx (currently set to 86400 seconds)
-- **Large file upload fails**: Check `client_max_body_size 100M` in nginx image server location
-- **Mixed content warnings**: Ensure `IMAGE_SERVER` uses HTTPS with correct port (e.g., `https://host:8887`)
+### Traefik proxy issues (path-based routing)
+- **404 Not Found**: Verify routes exist in `/data/opt/Traefik/dynamic.yml` for `/vista` and `/vista-images`
+- **Broken links in image server**: Ensure `ROOT_PATH=/vista-images` so HTML directory listing links include the prefix
+- **WebSocket disconnects**: Traefik v3 handles WebSocket upgrades automatically; check Traefik logs if issues persist
+- **Streamlit routing errors**: Ensure `baseUrlPath = "/vista"` is set in `frontend/.streamlit/config.toml`
+- **Mixed content warnings**: Ensure `IMAGE_SERVER` uses HTTPS (e.g., `https://host/vista-images`)
 
 ## Additional Documentation
 
